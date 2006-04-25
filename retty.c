@@ -434,7 +434,7 @@ finddlopen(pid_t pid)
 		return -1; \
 	} \
 	s_ += libcaddr; \
-	printf("%s: %lx <- libc: %lx\n", n_, s_, libcaddr);
+	//printf("%s: %lx <- libc: %lx\n", n_, s_, libcaddr);
 	l("open", openaddr);
 	l("dup", dupaddr);
 	l("dup2", dup2addr);
@@ -457,41 +457,6 @@ write_mem(pid_t pid, unsigned long *buf, int nlong, unsigned long pos)
 			return -1;
 	return 0;
 }
-
-/*
- Stack layout before we hijack the process.
- The stack grows up. $OLDEIP is EIP when we attach.
- Args to _dl_open are passed in registers (EAX,EDX,ECX).
-
- $NEWESP, EIP  ->    pushad
-                     mov $NEWESP, esp
-                     call _dl_open
-          ECX  ->    mov $OLDESP, esp
-                     popad
-                     ret
-          EAX  ->    "libname.so"
-      $OLDESP  ->    savedregs (32 bytes)
-          ESP  ->    $OLDEIP
-                     Top of user stack
-*/
-#if 0
-static char code[] = {
-	0x60,                       /* pushad (0x60) */
-	0xbc, 0x0, 0x0, 0x0, 0x0,   /* mov $0, %esp */
-	0xe8, 0x0, 0x0, 0x0, 0x0,   /* call $0 */
-	0xbc, 0x0, 0x0, 0x0, 0x0,   /* mov $0, %oldesp */
-	0x61,                       /* popad */
-	0xc3,                       /* ret */
-	0x0, 0x0                    /* pad */
-};
-
-enum {
-	OFF_NEWESP = 2,
-	OFF_DLOPEN = 7,
-	OFF_DLRET = 11,
-	OFF_OLDESP = 12
-};
-#endif
 
 static char code[] = {
 	0x90,
@@ -623,16 +588,18 @@ int oraise[] = {0x159-7};
 void
 rewrite_(char code[], int offsets[], int n_offsets, unsigned long value)
 {
-	int i,j;
+	int i;
 	for (i = 0; i < n_offsets; i++) {
 		/* :) */
 		unsigned long *p = (unsigned long *) &code[23+offsets[i]];
 		*p = value - (23+offsets[i]) - 4;
+#if 0
 		printf("[%x] %lx\n", 7+offsets[i], value);
 		printf("\t");
 		for (j = -1; j < 6; j++)
-		printf("%x ", (int)code[7+offsets[i]+j]);
+			printf("%x ", (int)code[7+offsets[i]+j]);
 		printf("\n");
+#endif
 	}
 }
 
@@ -666,7 +633,6 @@ main(int argc, char *argv[])
 	grantpt(ptm);
 	unlockpt(ptm);
 	pts = ptsname(ptm);
-
 	tcflush(ptm, TCIOFLUSH);
 	(void) ioctl(ptm, TIOCEXCL, (char *) 0);
 
@@ -674,7 +640,6 @@ main(int argc, char *argv[])
 	n = n/4 + (n%4 ? 1 : 0);
 	arg = xmalloc(n*sizeof(unsigned long));
 	memcpy(arg, pts, n*4);
-
 
 	/* Attach */
 	if (0 > ptrace(PTRACE_ATTACH, pid, 0, 0)) {
@@ -700,7 +665,7 @@ main(int argc, char *argv[])
 	/* finish code and push it */
 	regs.esp -= sizeof(code);
 	codeaddr = regs.esp;
-	printf("codesize: %x codeaddr: %lx sizeof(long): %d\n", sizeof(code), codeaddr, sizeof(long));
+	//printf("codesize: %x codeaddr: %lx\n", sizeof(code), codeaddr));
 	rewrite(code, oopen, openaddr - codeaddr);
 	rewrite(code, odup, dupaddr - codeaddr);
 	rewrite(code, odup2, dup2addr - codeaddr);
@@ -731,7 +696,7 @@ main(int argc, char *argv[])
 
 	/* Detach and continue */
 	ptrace(PTRACE_SETREGS, pid, 0, &regs);
-	kill(pid, SIGWINCH);
+	kill(pid, SIGWINCH); // interrupt any syscall (typically read() ;)
 	ptrace(PTRACE_DETACH, pid, 0, 0);
 
 	while (1) {
