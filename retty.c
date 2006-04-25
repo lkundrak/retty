@@ -33,6 +33,7 @@
 #include <sys/select.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdbool.h>
 
 unsigned long openaddr = 0xabcdef, dupaddr, dup2addr, ioctladdr, raiseaddr, closeaddr;
 
@@ -614,6 +615,56 @@ sigwinch(int x)
 	ioctl(ptm, TIOCSWINSZ, &w);
 }
 
+ssize_t
+process_escapes(char *buf, ssize_t *len)
+{
+	static enum { ST_NONE, ST_ENTER, ST_ESCAPE } state;
+	ssize_t i;
+	for (i = 0; i < *len; i++) {
+		//fprintf(stderr, "[state=%d %d/%d char=%x]\n", state, i, *len - 1, buf[i]);
+		switch (state) {
+		case ST_NONE:
+			if (buf[i] == '\n' || buf[i] == '\r')
+				state = ST_ENTER;
+			break;
+		case ST_ENTER:
+			if (buf[i] == '`') {
+				state = ST_ESCAPE;
+				memmove(buf + i, buf + i + 1, *len - i - 1);
+				(*len)--; i--;
+			} else {
+				state = ST_NONE;
+			}
+			break;
+		case ST_ESCAPE:
+			state = ST_NONE;
+			switch (buf[i]) {
+			case '.':
+				return i-2+1;
+			case '?':
+				printf("Supported escape sequences:\n");
+				printf("`. - return the process to its original terminal\n");
+				printf("`? - this message\n");
+				printf("`` - send the escape character by typing it twice\n");
+				printf("(Note that escapes are only recognized immediately after newline.)\n");
+				memmove(buf + i, buf + i + 1, *len - i - 1);
+				(*len)--; i--;
+				break;
+			case '`':
+				break;
+			default:
+				memmove(buf + i + 1, buf + i, *len - i);
+				buf[i] = '`';
+				(*len)++; i++;
+				break;
+			}
+			break;
+		}
+	}
+
+	return 0;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -732,8 +783,14 @@ main(int argc, char *argv[])
 		}
 
 		if (FD_ISSET(0, &fds)) {
-			char buf[256];
+			char buf[2*256];
 			ssize_t len = read(0, buf, 256);
+			ssize_t stop;
+			stop = process_escapes(buf, &len);
+			if (stop) {
+				write(ptm, buf, stop-1);
+				break;
+			}
 			write(ptm, buf, len);
 		}
 	}
