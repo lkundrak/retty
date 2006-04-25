@@ -697,6 +697,11 @@ main(int argc, char *argv[])
 	/* Detach and continue */
 	ptrace(PTRACE_SETREGS, pid, 0, &regs);
 	kill(pid, SIGWINCH); // interrupt any syscall (typically read() ;)
+	{ // shellcode will raise another SIGWINCH after PTRACE_DETACH
+		struct winsize w;
+		ioctl(1, TIOCGWINSZ, &w);
+		ioctl(ptm, TIOCSWINSZ, &w);
+	}
 	ptrace(PTRACE_DETACH, pid, 0, 0);
 
 	while (1) {
