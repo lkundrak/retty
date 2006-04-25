@@ -40,6 +40,8 @@ main(int argc, char *argv[])
 		return 2;
 	}
 
+	printf("%s started with pid %d\n", argv[1], pid);
+
 	signal(SIGCHLD, sigchld);
 
 	while (1) {
