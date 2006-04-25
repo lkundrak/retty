@@ -3,6 +3,8 @@
  *
  * Usage: blindtty CMD [ARGS]...
  *
+ * You might find it useful to run it as "setsid blindtty CMD...".
+ *
  * Copyright (c) 2006  Petr Baudis, Jan Sembera
  */
 
@@ -29,10 +31,6 @@ main(int argc, char *argv[])
 		fprintf(stderr, "Usage: blindtty CMD [ARG]...\n");
 		return 1;
 	}
-
-	if (fork())
-		return 0;
-	setsid();
 
 	pid = forkpty(&ptm, NULL, NULL, NULL);
 	if (!pid) {
