@@ -615,6 +615,12 @@ sigwinch(int x)
 	ioctl(ptm, TIOCSWINSZ, &w);
 }
 
+void
+sigint(int x)
+{
+	tcsendbreak(ptm, 0);
+}
+
 ssize_t
 process_escapes(char *buf, ssize_t *len)
 {
@@ -697,6 +703,7 @@ main(int argc, char *argv[])
 	(void) ioctl(ptm, TIOCEXCL, (char *) 0);
 
 	signal(SIGWINCH, sigwinch);
+	//signal(SIGINT, sigint); // breaks stuff
 
 	/* Attach */
 	if (0 > ptrace(PTRACE_ATTACH, pid, 0, 0)) {
