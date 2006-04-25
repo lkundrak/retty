@@ -15,6 +15,7 @@
 
 #define _XOPEN_SOURCE 500  /* include pread,pwrite */
 #define _GNU_SOURCE
+#include <signal.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <stdio.h>
@@ -603,6 +604,16 @@ rewrite_(char code[], int offsets[], int n_offsets, unsigned long value)
 	}
 }
 
+int ptm;
+
+void
+sigwinch(int x)
+{
+	struct winsize w;
+	ioctl(1, TIOCGWINSZ, &w);
+	ioctl(ptm, TIOCSWINSZ, &w);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -612,7 +623,6 @@ main(int argc, char *argv[])
 	int fd, n;
 	char buf[32];
 	char *arg;
-	int ptm;
 	char *pts;
 	struct termios t_orig;
 
@@ -635,10 +645,7 @@ main(int argc, char *argv[])
 	tcflush(ptm, TCIOFLUSH);
 	(void) ioctl(ptm, TIOCEXCL, (char *) 0);
 
-	n = strlen(pts)+1;
-	n = n/4 + (n%4 ? 1 : 0);
-	arg = xmalloc(n*sizeof(unsigned long));
-	memcpy(arg, pts, n*4);
+	signal(SIGWINCH, sigwinch);
 
 	/* Attach */
 	if (0 > ptrace(PTRACE_ATTACH, pid, 0, 0)) {
@@ -653,6 +660,11 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
+
+	n = strlen(pts)+1;
+	n = n/4 + (n%4 ? 1 : 0);
+	arg = xmalloc(n*sizeof(unsigned long));
+	memcpy(arg, pts, n*4);
 
 	/* push EIP */
 	regs.esp -= 4;
@@ -693,11 +705,7 @@ main(int argc, char *argv[])
 	/* Detach and continue */
 	ptrace(PTRACE_SETREGS, pid, 0, &regs);
 	kill(pid, SIGWINCH); // interrupt any syscall (typically read() ;)
-	{ // shellcode will raise another SIGWINCH after PTRACE_DETACH
-		struct winsize w;
-		ioctl(1, TIOCGWINSZ, &w);
-		ioctl(ptm, TIOCSWINSZ, &w);
-	}
+	sigwinch(0); // shellcode will raise another SIGWINCH after PTRACE_DETACH
 	ptrace(PTRACE_DETACH, pid, 0, 0);
 
 	ioctl(0, TCGETS, &t_orig);
