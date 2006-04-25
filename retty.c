@@ -614,8 +614,7 @@ main(int argc, char *argv[])
 	char *arg;
 	int ptm;
 	char *pts;
-	char stack[128];
-	int i;
+	struct termios t_orig;
 
 	if (argc != 2) {
 		fprintf(stderr, "usage: %s PID\n", argv[0]);
@@ -654,9 +653,6 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
-
-	for (i=0; i<32; i++)
-		ptrace(PTRACE_PEEKDATA, pid, regs.esp+i*4, stack+i*4);
 
 	/* push EIP */
 	regs.esp -= 4;
@@ -704,6 +700,8 @@ main(int argc, char *argv[])
 	}
 	ptrace(PTRACE_DETACH, pid, 0, 0);
 
+	ioctl(0, TCGETS, &t_orig);
+
 	while (1) {
 		struct termios t;
 		fd_set fds;
@@ -719,6 +717,9 @@ main(int argc, char *argv[])
 		if (FD_ISSET(ptm, &fds)) {
 			char buf[256];
 			ssize_t len = read(ptm, buf, 256);
+			if (len < 0 && errno != EINTR && errno != EAGAIN) {
+				break;
+			}
 			write(1, buf, len);
 		}
 
@@ -728,6 +729,8 @@ main(int argc, char *argv[])
 			write(ptm, buf, len);
 		}
 	}
+
+	ioctl(0, TCSETS, &t_orig);
 
 	return 0;
 }
