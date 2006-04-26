@@ -778,6 +778,8 @@ main(int argc, char *argv[])
 		select(ptm+1, &fds, NULL, NULL, NULL);
 
 		ioctl(ptm, TCGETS, &t);
+		// we keep 0 raw and let the pts do the terminal work
+		t.c_lflag &= ~(ECHO|ECHOE|ECHOK|ECHONL|ICANON);
 		ioctl(0, TCSETS, &t);
 
 		if (FD_ISSET(ptm, &fds)) {
