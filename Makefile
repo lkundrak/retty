@@ -11,12 +11,14 @@ all: $(EXE)
 blindtty: blindtty.o
 
 
-retty: retty.c
+retty: retty.o
 
-retty.c: bc-attach.i
-	@touch retty.c
+retty.o: bc-attach.i bc-detach.i
 
 bc-attach.i: attach.o
+	objdump -j .text -d $^ | ./bytecode.pl >$@
+
+bc-detach.i: detach.o
 	objdump -j .text -d $^ | ./bytecode.pl >$@
 
 

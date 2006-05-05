@@ -50,17 +50,16 @@ write_mem(pid_t pid, unsigned long *buf, int nlong, unsigned long pos)
 	return 0;
 }
 
-static char attach_code[] = {
-#include "bc-attach.i"
-};
-
-
 
 static void
 inject_attach(pid_t pid, int n, char ptsname[])
 {
 	struct user_regs_struct regs;
 	unsigned long codeaddr, ptsnameaddr;
+
+	static char attach_code[] = {
+#include "bc-attach.i"
+	};
 
 	/* Attach */
 	if (0 > ptrace(PTRACE_ATTACH, pid, 0, 0)) {
@@ -80,7 +79,7 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	/* finish code and push it */
 	regs.esp -= sizeof(attach_code);
 	codeaddr = regs.esp;
-	//printf("codesize: %x codeaddr: %lx\n", sizeof(attach_code), codeaddr));
+	printf("codesize: %x codeaddr: %lx\n", sizeof(attach_code), codeaddr);
 	*((int*)&attach_code[sizeof(attach_code)-5]) = sizeof(attach_code) + n*4 + 4;
 	if (0 > write_mem(pid, (unsigned long*)&attach_code, sizeof(attach_code)/sizeof(long), regs.esp)) {
 		fprintf(stderr, "cannot write attach_code\n");
@@ -102,7 +101,7 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	ptrace(PTRACE_POKEDATA, pid, regs.esp, ptsnameaddr);
 
 	regs.eip = codeaddr+8;
-	printf("stack: %lx eip: %lx sub:%x\n", regs.esp, regs.eip, (int) attach_code[sizeof(attach_code)-7]);
+	printf("stack: %lx eip: %lx sub:%x\n", regs.esp, regs.eip, (int) attach_code[sizeof(attach_code)-5]);
 
 
 	/* Detach and continue */
@@ -111,6 +110,61 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	sigwinch(0); // shellcode will raise another SIGWINCH after PTRACE_DETACH
 	ptrace(PTRACE_DETACH, pid, 0, 0);
 }
+
+
+static void
+inject_detach(pid_t pid, int fd0, int fd1, int fd2)
+{
+	struct user_regs_struct regs;
+	unsigned long codeaddr;
+
+	static char detach_code[] = {
+#include "bc-detach.i"
+	};
+
+	/* Attach */
+	if (0 > ptrace(PTRACE_ATTACH, pid, 0, 0)) {
+		fprintf(stderr, "cannot attach to %d\n", pid);
+		exit(1);
+	}
+	waitpid(pid, NULL, 0);
+	ptrace(PTRACE_GETREGS, pid, 0, &regs);
+
+
+	/* Code injecting */
+
+	/* push EIP */
+	regs.esp -= 4;
+	ptrace(PTRACE_POKEDATA, pid, regs.esp, regs.eip);
+
+	/* finish code and push it */
+	regs.esp -= sizeof(detach_code);
+	codeaddr = regs.esp;
+	printf("codesize: %x codeaddr: %lx\n", sizeof(detach_code), codeaddr);
+	*((int*)&detach_code[sizeof(detach_code)-5]) = sizeof(detach_code) + 4 + 4 + 4;
+	if (0 > write_mem(pid, (unsigned long*)&detach_code, sizeof(detach_code)/sizeof(long), regs.esp)) {
+		fprintf(stderr, "cannot write detach_code\n");
+		exit(1);
+	}
+
+	/* push fds */
+	regs.esp -= 4;
+	ptrace(PTRACE_POKEDATA, pid, regs.esp, fd0);
+	regs.esp -= 4;
+	ptrace(PTRACE_POKEDATA, pid, regs.esp, fd1);
+	regs.esp -= 4;
+	ptrace(PTRACE_POKEDATA, pid, regs.esp, fd2);
+
+	regs.eip = codeaddr+8;
+	printf("stack: %lx eip: %lx sub:%x\n", regs.esp, regs.eip, (int) detach_code[sizeof(detach_code)-5]);
+
+
+	/* Detach and continue */
+	ptrace(PTRACE_SETREGS, pid, 0, &regs);
+	kill(pid, SIGWINCH); // interrupt any syscall (typically read() ;)
+	ptrace(PTRACE_DETACH, pid, 0, 0);
+}
+
 
 int ptm;
 
@@ -200,8 +254,8 @@ main(int argc, char *argv[])
 	grantpt(ptm);
 	unlockpt(ptm);
 	pts = ptsname(ptm);
-	tcflush(ptm, TCIOFLUSH);
-	(void) ioctl(ptm, TIOCEXCL, (char *) 0);
+	//tcflush(ptm, TCIOFLUSH);
+	//(void) ioctl(ptm, TIOCEXCL, (char *) 0);
 
 	n = strlen(pts)+1;
 	n = n/4 + (n%4 ? 1 : 0);
@@ -247,6 +301,8 @@ main(int argc, char *argv[])
 			stop = process_escapes(buf, &len);
 			if (stop) {
 				write(ptm, buf, stop-1);
+				inject_detach(pid, 4, 5, 6);
+				sleep(1);
 				break;
 			}
 			write(ptm, buf, len);
