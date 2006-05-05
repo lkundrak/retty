@@ -92,6 +92,7 @@ process_escapes(char *buf, ssize_t *len)
 			state = ST_NONE;
 			switch (buf[i]) {
 			case '.':
+			case 'd':
 				return i-2+1;
 			case '?':
 				printf("Supported escape sequences:\n");
