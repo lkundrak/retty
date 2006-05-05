@@ -47,7 +47,7 @@ write_mem(pid_t pid, unsigned long *buf, int nlong, unsigned long pos)
 	return 0;
 }
 
-static char code[] = {
+static char attach_code[] = {
 #include "bc-attach.i"
 };
 
@@ -96,6 +96,7 @@ process_escapes(char *buf, ssize_t *len)
 			case '?':
 				printf("Supported escape sequences:\n");
 				printf("`. - return the process to its original terminal\n");
+				printf("`d - return the process to its original terminal\n");
 				printf("`? - this message\n");
 				printf("`` - send the escape character by typing it twice\n");
 				printf("(Note that escapes are only recognized immediately after newline.)\n");
@@ -143,6 +144,11 @@ main(int argc, char *argv[])
 	tcflush(ptm, TCIOFLUSH);
 	(void) ioctl(ptm, TIOCEXCL, (char *) 0);
 
+	n = strlen(pts)+1;
+	n = n/4 + (n%4 ? 1 : 0);
+	arg = malloc(n*sizeof(unsigned long));
+	memcpy(arg, pts, n*4);
+
 	signal(SIGWINCH, sigwinch);
 	//signal(SIGINT, sigint); // breaks stuff
 
@@ -152,30 +158,22 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	waitpid(pid, NULL, 0);
-	sprintf(buf, "/proc/%d/mem", pid);
-	fd = open(buf, O_WRONLY);
-	if (0 > fd) {
-		fprintf(stderr, "cannot open %s\n", buf);
-		exit(1);
-	}
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
-	n = strlen(pts)+1;
-	n = n/4 + (n%4 ? 1 : 0);
-	arg = malloc(n*sizeof(unsigned long));
-	memcpy(arg, pts, n*4);
+
+	/* Code injecting */
 
 	/* push EIP */
 	regs.esp -= 4;
 	ptrace(PTRACE_POKEDATA, pid, regs.esp, regs.eip);
 
 	/* finish code and push it */
-	regs.esp -= sizeof(code);
+	regs.esp -= sizeof(attach_code);
 	codeaddr = regs.esp;
-	//printf("codesize: %x codeaddr: %lx\n", sizeof(code), codeaddr));
-	*((int*)&code[sizeof(code)-5]) = sizeof(code) + n*4 + 4;
-	if (0 > write_mem(pid, (unsigned long*)&code, sizeof(code)/sizeof(long), regs.esp)) {
-		fprintf(stderr, "cannot write code\n");
+	//printf("codesize: %x codeaddr: %lx\n", sizeof(attach_code), codeaddr));
+	*((int*)&attach_code[sizeof(attach_code)-5]) = sizeof(attach_code) + n*4 + 4;
+	if (0 > write_mem(pid, (unsigned long*)&attach_code, sizeof(attach_code)/sizeof(long), regs.esp)) {
+		fprintf(stderr, "cannot write attach_code\n");
 		exit(1);
 	}
 
@@ -194,7 +192,8 @@ main(int argc, char *argv[])
 	ptrace(PTRACE_POKEDATA, pid, regs.esp, ptsnameaddr);
 
 	regs.eip = codeaddr+8;
-	printf("stack: %lx eip: %lx sub:%x\n", regs.esp, regs.eip, (int) code[sizeof(code)-7]);
+	printf("stack: %lx eip: %lx sub:%x\n", regs.esp, regs.eip, (int) attach_code[sizeof(attach_code)-7]);
+
 
 	/* Detach and continue */
 	ptrace(PTRACE_SETREGS, pid, 0, &regs);
