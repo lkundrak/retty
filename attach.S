@@ -93,11 +93,12 @@ attach:
 	int	$0x80
 
 
-	/* From now on, NO PUSHING PERMITTED! We will look back at the stack from the retty process. ;-) */
+	/* From now on, NO %esp MANIPULATION PERMITTED!
+	   We will look back at the stack from the retty process. ;-) */
 
 
 	mov	$SYS_ioctl, %eax
-	pop	%ebx
+	mov	(%esp), %ebx
 	mov 	$TCGETS, %ecx
 	lea	-sizeof_termios(%ebp), %edx
 	int	$0x80
@@ -110,7 +111,7 @@ attach:
 
 
 	mov	$SYS_ioctl, %eax
-	pop	%ebx
+	mov	0x4(%esp), %ebx
 	mov	$TCGETS, %ecx
 	lea	-sizeof_termios(%ebp), %edx
 	int	$0x80
@@ -123,7 +124,7 @@ attach:
 
 
 	mov	$SYS_ioctl, %eax
-	pop	%ebx
+	mov	0x8(%esp), %ebx
 	mov	$TCGETS, %ecx
 	lea	-sizeof_termios(%ebp), %edx
 	int	$0x80
@@ -136,7 +137,7 @@ attach:
 
 
 	mov	$SYS_close, %eax
-	pop	%ebx
+	mov	0xc(%esp), %ebx
 	int	$0x80
 
 
@@ -147,6 +148,8 @@ attach:
 	mov	$SYS_kill, %eax
 	mov	$SIGWINCH, %ecx
 	int	$0x80
+
+	nop
 
 	leave
 	popa

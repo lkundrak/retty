@@ -35,6 +35,8 @@
 
 void sigwinch(int x);
 
+static int oldin, oldout, olderr;
+
 
 /* Write NLONG 4 byte words from BUF into PID starting
    at address POS.  Calling process must be attached to PID. */
@@ -56,6 +58,7 @@ inject_attach(pid_t pid, int n, char ptsname[])
 {
 	struct user_regs_struct regs;
 	unsigned long codeaddr, ptsnameaddr;
+	int waitst;
 
 	static char attach_code[] = {
 #include "bc-attach.i"
@@ -104,11 +107,28 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	printf("stack: %lx eip: %lx sub:%x\n", regs.esp, regs.eip, (int) attach_code[sizeof(attach_code)-5]);
 
 
-	/* Detach and continue */
+	/* Run the bytecode */
 	ptrace(PTRACE_SETREGS, pid, 0, &regs);
-	kill(pid, SIGWINCH); // interrupt any syscall (typically read() ;)
-	sigwinch(0); // shellcode will raise another SIGWINCH after PTRACE_DETACH
-	ptrace(PTRACE_DETACH, pid, 0, 0);
+	sigwinch(0); // bytecode will raise another SIGWINCH later so it will get sync'd thru
+	// interrupt any syscall with the WINCH (typically read() ;)
+	do {
+		ptrace(PTRACE_CONT, pid, 0, (void*) SIGWINCH);
+		wait(&waitst);
+		if (!WIFSTOPPED(waitst)) {
+			fprintf(stderr, "attached task not stopped\n");
+			exit(1);
+		}
+	} while (WSTOPSIG(waitst) != SIGWINCH);
+
+	/* Grab backed up fds from stack */
+	ptrace(PTRACE_GETREGS, pid, 0, &regs);
+	oldin = ptrace(PTRACE_PEEKDATA, pid, regs.esp + 0x8, NULL);
+	oldout = ptrace(PTRACE_PEEKDATA, pid, regs.esp + 0x4, NULL);
+	olderr = ptrace(PTRACE_PEEKDATA, pid, regs.esp + 0x0, NULL);
+	printf("oldfds (esp: %lx): %d, %d, %d\n", regs.esp, oldin, oldout, olderr);
+
+	/* Let go */
+	ptrace(PTRACE_DETACH, pid, 0, (void*) SIGWINCH);
 }
 
 
@@ -301,7 +321,7 @@ main(int argc, char *argv[])
 			stop = process_escapes(buf, &len);
 			if (stop) {
 				write(ptm, buf, stop-1);
-				inject_detach(pid, 4, 5, 6);
+				inject_detach(pid, oldin, oldout, olderr);
 				sleep(1);
 				break;
 			}
