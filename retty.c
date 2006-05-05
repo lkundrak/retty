@@ -33,6 +33,9 @@
 #include <stdbool.h>
 
 
+void sigwinch(int x);
+
+
 /* Write NLONG 4 byte words from BUF into PID starting
    at address POS.  Calling process must be attached to PID. */
 static int
@@ -50,6 +53,64 @@ write_mem(pid_t pid, unsigned long *buf, int nlong, unsigned long pos)
 static char attach_code[] = {
 #include "bc-attach.i"
 };
+
+
+
+static void
+inject_attach(pid_t pid, int n, char ptsname[])
+{
+	struct user_regs_struct regs;
+	unsigned long codeaddr, ptsnameaddr;
+
+	/* Attach */
+	if (0 > ptrace(PTRACE_ATTACH, pid, 0, 0)) {
+		fprintf(stderr, "cannot attach to %d\n", pid);
+		exit(1);
+	}
+	waitpid(pid, NULL, 0);
+	ptrace(PTRACE_GETREGS, pid, 0, &regs);
+
+
+	/* Code injecting */
+
+	/* push EIP */
+	regs.esp -= 4;
+	ptrace(PTRACE_POKEDATA, pid, regs.esp, regs.eip);
+
+	/* finish code and push it */
+	regs.esp -= sizeof(attach_code);
+	codeaddr = regs.esp;
+	//printf("codesize: %x codeaddr: %lx\n", sizeof(attach_code), codeaddr));
+	*((int*)&attach_code[sizeof(attach_code)-5]) = sizeof(attach_code) + n*4 + 4;
+	if (0 > write_mem(pid, (unsigned long*)&attach_code, sizeof(attach_code)/sizeof(long), regs.esp)) {
+		fprintf(stderr, "cannot write attach_code\n");
+		exit(1);
+	}
+
+	/* push ptsname[] */
+	regs.esp -= n*4;
+	ptsnameaddr = regs.esp;
+	if (0 > write_mem(pid, (unsigned long*)ptsname, n, regs.esp)) {
+		fprintf(stderr, "cannot write bla argument (%s)\n",
+			strerror(errno));
+		exit(1);
+	}
+
+	/* push ptsname */
+	/* FIXME: This is superfluous now, change bytecode to use lea */
+	regs.esp -= 4;
+	ptrace(PTRACE_POKEDATA, pid, regs.esp, ptsnameaddr);
+
+	regs.eip = codeaddr+8;
+	printf("stack: %lx eip: %lx sub:%x\n", regs.esp, regs.eip, (int) attach_code[sizeof(attach_code)-7]);
+
+
+	/* Detach and continue */
+	ptrace(PTRACE_SETREGS, pid, 0, &regs);
+	kill(pid, SIGWINCH); // interrupt any syscall (typically read() ;)
+	sigwinch(0); // shellcode will raise another SIGWINCH after PTRACE_DETACH
+	ptrace(PTRACE_DETACH, pid, 0, 0);
+}
 
 int ptm;
 
@@ -123,10 +184,7 @@ int
 main(int argc, char *argv[])
 {
 	pid_t pid;
-	struct user_regs_struct regs;
-	unsigned long codeaddr, ptsnameaddr;
-	int fd, n;
-	char buf[32];
+	int n;
 	char *arg;
 	char *pts;
 	struct termios t_orig;
@@ -153,54 +211,9 @@ main(int argc, char *argv[])
 	signal(SIGWINCH, sigwinch);
 	//signal(SIGINT, sigint); // breaks stuff
 
-	/* Attach */
-	if (0 > ptrace(PTRACE_ATTACH, pid, 0, 0)) {
-		fprintf(stderr, "cannot attach to %d\n", pid);
-		exit(1);
-	}
-	waitpid(pid, NULL, 0);
-	ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
+	inject_attach(pid, n, arg);
 
-	/* Code injecting */
-
-	/* push EIP */
-	regs.esp -= 4;
-	ptrace(PTRACE_POKEDATA, pid, regs.esp, regs.eip);
-
-	/* finish code and push it */
-	regs.esp -= sizeof(attach_code);
-	codeaddr = regs.esp;
-	//printf("codesize: %x codeaddr: %lx\n", sizeof(attach_code), codeaddr));
-	*((int*)&attach_code[sizeof(attach_code)-5]) = sizeof(attach_code) + n*4 + 4;
-	if (0 > write_mem(pid, (unsigned long*)&attach_code, sizeof(attach_code)/sizeof(long), regs.esp)) {
-		fprintf(stderr, "cannot write attach_code\n");
-		exit(1);
-	}
-
-	/* push ptsname[] */
-	regs.esp -= n*4;
-	ptsnameaddr = regs.esp;
-	if (0 > write_mem(pid, (unsigned long*)arg, n, regs.esp)) {
-		fprintf(stderr, "cannot write bla argument (%s)\n",
-			strerror(errno));
-		exit(1);
-	}
-
-	/* push ptsname */
-	/* FIXME: This is superfluous now, change bytecode to use lea */
-	regs.esp -= 4;
-	ptrace(PTRACE_POKEDATA, pid, regs.esp, ptsnameaddr);
-
-	regs.eip = codeaddr+8;
-	printf("stack: %lx eip: %lx sub:%x\n", regs.esp, regs.eip, (int) attach_code[sizeof(attach_code)-7]);
-
-
-	/* Detach and continue */
-	ptrace(PTRACE_SETREGS, pid, 0, &regs);
-	kill(pid, SIGWINCH); // interrupt any syscall (typically read() ;)
-	sigwinch(0); // shellcode will raise another SIGWINCH after PTRACE_DETACH
-	ptrace(PTRACE_DETACH, pid, 0, 0);
 
 	ioctl(0, TCGETS, &t_orig);
 
