@@ -133,6 +133,16 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	ptrace(PTRACE_DETACH, pid, 0, (void*) SIGWINCH);
 }
 
+int
+try_detach() {
+	static int detached = 0;
+	if (detached > 0) return 0;
+	if (0 > ptrace(PTRACE_ATTACH, pid, 0, 0)) {
+		return -1;
+	}
+	detached++;
+	return 0;
+}
 
 static void
 inject_detach(pid_t pid, int fd0, int fd1, int fd2)
@@ -145,10 +155,7 @@ inject_detach(pid_t pid, int fd0, int fd1, int fd2)
 	};
 
 	/* Attach */
-	if (0 > ptrace(PTRACE_ATTACH, pid, 0, 0)) {
-		fprintf(stderr, "cannot attach to %d\n", pid);
-		exit(1);
-	}
+	(void) try_detach();
 	waitpid(pid, NULL, 0);
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
@@ -208,6 +215,7 @@ void
 cleanup(int x)
 {
 	static int cleanups;
+	if (try_detach()) return;
 	if (cleanups++ > 0) return;
 	inject_detach(pid, oldin, oldout, olderr);
 	ioctl(0, TCSETS, &t_orig);
@@ -240,7 +248,12 @@ process_escapes(char *buf, ssize_t *len)
 			switch (buf[i]) {
 			case '.':
 			case 'd':
-				return i-2+1;
+			  	if (try_detach()) {
+				  	printf("Detach request aborted - ptrace unsuccessful\n");
+					memmove(buf + i, buf + i + 1, *len - i - 1);
+					(*len)--; i--;
+					break;
+				} else return i-2+1;
 			case '?':
 				printf("Supported escape sequences:\n");
 				printf("`. - return the process to its original terminal\n");
