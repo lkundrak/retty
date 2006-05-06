@@ -35,7 +35,9 @@
 
 void sigwinch(int x);
 
-static int oldin, oldout, olderr;
+static int oldin, oldout, olderr, die, intr;
+pid_t pid;
+struct termios t_orig;
 
 
 /* Write NLONG 4 byte words from BUF into PID starting
@@ -199,7 +201,17 @@ sigwinch(int x)
 void
 sigint(int x)
 {
-	tcsendbreak(ptm, 0);
+	intr = 1;
+}
+
+void
+cleanup(int x)
+{
+	static int cleanups;
+	if (cleanups++ > 0) return;
+	inject_detach(pid, oldin, oldout, olderr);
+	ioctl(0, TCSETS, &t_orig);
+	die = 1;
 }
 
 ssize_t
@@ -257,11 +269,9 @@ process_escapes(char *buf, ssize_t *len)
 int
 main(int argc, char *argv[])
 {
-	pid_t pid;
 	int n;
 	char *arg;
 	char *pts;
-	struct termios t_orig;
 
 	if (argc != 2) {
 		fprintf(stderr, "usage: %s PID\n", argv[0]);
@@ -283,22 +293,37 @@ main(int argc, char *argv[])
 	memcpy(arg, pts, n*4);
 
 	signal(SIGWINCH, sigwinch);
-	//signal(SIGINT, sigint); // breaks stuff
+	signal(SIGINT, sigint); // breaks stuff
 
 
 	inject_attach(pid, n, arg);
 
-
 	ioctl(0, TCGETS, &t_orig);
 
-	while (1) {
-		struct termios t;
+	signal(SIGTERM, cleanup);
+	//signal(SIGINT, cleanup);
+	signal(SIGQUIT, cleanup);
+	signal(SIGPIPE, cleanup);
+
+	while (!die) {
+		static struct termios t;
 		fd_set fds;
+
+		while (intr) {
+			char ibuf = t.c_cc[VINTR];
+			write(ptm, &ibuf, 1);
+			intr--;
+		}
 
 		FD_ZERO(&fds);
 		FD_SET(ptm, &fds);
 		FD_SET(0, &fds);
-		select(ptm+1, &fds, NULL, NULL, NULL);
+		if (select(ptm+1, &fds, NULL, NULL, NULL) < 0) {
+			if (errno == EINTR || errno == EAGAIN)
+				continue;
+			perror("select()");
+			break;
+		}
 
 		ioctl(ptm, TCGETS, &t);
 		// we keep 0 raw and let the pts do the terminal work
@@ -321,15 +346,13 @@ main(int argc, char *argv[])
 			stop = process_escapes(buf, &len);
 			if (stop) {
 				write(ptm, buf, stop-1);
-				inject_detach(pid, oldin, oldout, olderr);
-				sleep(1);
 				break;
 			}
 			write(ptm, buf, len);
 		}
 	}
 
-	ioctl(0, TCSETS, &t_orig);
+	cleanup(0);
 
 	return 0;
 }
