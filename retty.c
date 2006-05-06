@@ -215,9 +215,9 @@ void
 cleanup(int x)
 {
 	static int cleanups;
-	if (try_detach()) return;
+	if ((x != 0) && try_detach()) return;
 	if (cleanups++ > 0) return;
-	inject_detach(pid, oldin, oldout, olderr);
+	if (!try_detach()) inject_detach(pid, oldin, oldout, olderr);
 	ioctl(0, TCSETS, &t_orig);
 	die = 1;
 }
@@ -297,7 +297,7 @@ main(int argc, char *argv[])
 	grantpt(ptm);
 	unlockpt(ptm);
 	pts = ptsname(ptm);
-	//tcflush(ptm, TCIOFLUSH);
+	tcflush(ptm, TCIOFLUSH);
 	//(void) ioctl(ptm, TIOCEXCL, (char *) 0);
 
 	n = strlen(pts)+1;
