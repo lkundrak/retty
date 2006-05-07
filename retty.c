@@ -9,24 +9,18 @@
  * Copyright (c) 2006  Petr Baudis, Jan Sembera
  */
 
-
-#define _XOPEN_SOURCE 500  /* include pread,pwrite */
-#define _GNU_SOURCE
+#define _GNU_SOURCE // grantpt & family
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include <dlfcn.h>
 #include <fcntl.h>
-#include <elf.h>
 #include <sys/ptrace.h>
 #include <sys/user.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/stat.h>
 #include <sys/select.h>
 #include <unistd.h>
 #include <errno.h>
