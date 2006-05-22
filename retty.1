@@ -1,0 +1,47 @@
+.TH SCREEN 1 2006-05-22
+
+.SH NAME
+retty - Attach process running on another terminal
+
+.SH SYNOPSIS
+.B retty pid
+
+.SH DESCRIPTION
+
+.B retty
+is a simple tool which will let you attach process currently running on
+another terminal. Unlike screen, you need to make no special provisions
+in advance - just get the process' pid and attach it anytime.
+
+Non-violently killing retty should provide for a proper detach - after that,
+the process can be used on the original terminal again (multiple subsequent
+retty attachments of a single process are possible, but the process does I/O
+only on the last one).
+
+You can also use escapes to detach a process and possibly do other things.
+The escape character is "`" (lowercase of "~") and "`h" will give you list
+of possible escape sequences. The escape character must be immediately
+preceded by an enter.
+
+.RE
+.SH "SEE ALSO"
+screen(1)
+
+.RE
+.SH BUGS
+.PD
+.IP \(bu
+.I retty
+is x86-specific and works only on Linux.
+.IP \(bu
+The attached process' controlling terminal is not switched appropriately,
+which causes many funny effects (e.g.
+.I mutt
+not properly adjusting for your
+window size), annoying bugs (ctrl-c not delivered properly) and totally
+breaking attaching for some applications (OpenSSH).
+.IP \(bu
+If you attach
+.I bash
+it imagines EOF on stdin. Attaching and detaching multiple times without
+any activity in the meantime will cause it to die.
