@@ -286,10 +286,9 @@ version(void) {
 void 
 usage(char *pname) {
 	printf("Usage: \n");
-	printf("	%s [-h] [-v] [-d fd[,fd[..]]] [-f] [-a arch] -p <PID> \n\n", pname);
+	printf("	%s [-h] [-v] [-d fd[,fd[..]]] [-f] [-a arch] PID \n\n", pname);
 	printf(" -h		This help\n");
 	printf(" -v		Shows version of retty\n");
-	printf(" -p PID		Selects process to be attached\n");
 	printf(" -d fd,...	List of file descriptors to be attached, separated by comma\n");
 	printf("		If not specified, default is 0, 1 and 2.\n");
 	printf(" -f		Use forking code instead of standard code. Beware that this might\n");
@@ -297,6 +296,7 @@ usage(char *pname) {
 	printf(" -a arch	Selects architecture on which the target process is running.\n");
 	printf("		Normally, retty will select the platform itself, but there are\n");
 	printf("		some specific cases that require manual selection\n");
+	printf(" PID		PID of process that will be attached\n");
 }
 
 void
@@ -321,7 +321,7 @@ main(int argc, char *argv[])
 	while (1) {
 		int res;
 
-		res = getopt(argc, argv, "hvp:d:fa:o:"); 
+		res = getopt(argc, argv, "hvd:fa:o:"); 
 		if (res == -1) break;
 
 		switch (res) {
@@ -333,10 +333,6 @@ main(int argc, char *argv[])
 		  	case 'v':
 				version();
 				exit(EXIT_SUCCESS);
-				break;
-
-			case 'p':
-				setpid(optarg, argv[0]);
 				break;
 
 			case 'd':
@@ -361,14 +357,16 @@ main(int argc, char *argv[])
 	}
 
 	if (optind < argc) {
-		if (pid != 0) {
-			fprintf(stderr, "PID specified both with new style and old style. Using new.\n");
-		} else {
-			setpid(argv[optind], argv[0]);
-		}
-	}
+		char *x;
 
-	if (pid == 0) {
+		pid = strtol(argv[optind], &x, 0);
+		if ((!x) || (*x)) {
+			fprintf(stderr, "PID specified incorrectly. Aborting.\n");
+			usage(argv[0]);
+			exit(EXIT_FAILURE);
+		}
+
+	} else {
 		usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
