@@ -9,6 +9,8 @@
  * Copyright (c) 2006  Petr Baudis, Jan Sembera
  */
 
+#include "retty.h"
+
 #define _GNU_SOURCE // grantpt & family
 #include <signal.h>
 #include <sys/ioctl.h>
@@ -30,7 +32,8 @@
 void sigwinch(int x);
 
 static int oldin, oldout, olderr, die, intr;
-pid_t pid;
+pid_t pid = 0;
+int forking = 0;
 struct termios t_orig;
 
 
@@ -273,6 +276,41 @@ process_escapes(char *buf, ssize_t *len)
 	return 0;
 }
 
+void
+version(void) {
+	printf("retty %s\n", VERSION);
+	printf("Copyright (c) 2006  Petr Baudis, Jan Sembera\n");
+	printf("This program is licensed under GNU GPL version 2 and no later.\n");
+}
+
+void 
+usage(char *pname) {
+	printf("Usage: \n");
+	printf("	%s [-h] [-v] [-d fd[,fd[..]]] [-f] [-a arch] -p <PID> \n\n", pname);
+	printf(" -h		This help\n");
+	printf(" -v		Shows version of retty\n");
+	printf(" -p PID		Selects process to be attached\n");
+	printf(" -d fd,...	List of file descriptors to be attached, separated by comma\n");
+	printf("		If not specified, default is 0, 1 and 2.\n");
+	printf(" -f		Use forking code instead of standard code. Beware that this might\n");
+	printf("		cause some very unexpected behaviour.\n");
+	printf(" -a arch	Selects architecture on which the target process is running.\n");
+	printf("		Normally, retty will select the platform itself, but there are\n");
+	printf("		some specific cases that require manual selection\n");
+}
+
+void
+setpid(char *pidchar, char *argv) {
+	char *x;
+
+	pid = strtol(pidchar, &x, 0);
+	if ((!x) || (*x)) {
+		fprintf(stderr, "PID specified incorrectly. Aborting.\n");
+		usage(argv);
+		exit(EXIT_FAILURE);
+	}
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -280,11 +318,60 @@ main(int argc, char *argv[])
 	char *arg;
 	char *pts;
 
-	if (argc != 2) {
-		fprintf(stderr, "usage: %s PID\n", argv[0]);
-		exit(1);
+	while (1) {
+		int res;
+
+		res = getopt(argc, argv, "hvp:d:fa:o:"); 
+		if (res == -1) break;
+
+		switch (res) {
+			case 'h':
+				usage(argv[0]);
+				exit(EXIT_SUCCESS);
+				break;
+
+		  	case 'v':
+				version();
+				exit(EXIT_SUCCESS);
+				break;
+
+			case 'p':
+				setpid(optarg, argv[0]);
+				break;
+
+			case 'd':
+				fprintf(stderr, "File descriptor alteration not yet implemented\n");
+				break;
+
+			case 'f':
+				fprintf(stderr, "Forking not yet implemented\n");
+				forking = 1;
+				break;
+
+			case 'a':
+				fprintf(stderr, "Architecture selection not yet implemented\n");
+				break;
+
+			default:
+				usage(argv[0]);
+				exit(EXIT_FAILURE);
+				break;
+		}
+
 	}
-	pid = strtol(argv[1], NULL, 0);
+
+	if (optind < argc) {
+		if (pid != 0) {
+			fprintf(stderr, "PID specified both with new style and old style. Using new.\n");
+		} else {
+			setpid(argv[optind], argv[0]);
+		}
+	}
+
+	if (pid == 0) {
+		usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
 
 	/* Setup pty */
 	ptm = getpt();
