@@ -26,6 +26,8 @@
 #include <errno.h>
 #include <stdbool.h>
 
+#define VERSION "1/sqrt(2)"
+
 
 void sigwinch(int x);
 
