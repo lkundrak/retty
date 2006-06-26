@@ -9,8 +9,6 @@
  * Copyright (c) 2006  Petr Baudis, Jan Sembera
  */
 
-#include "retty.h"
-
 #define _GNU_SOURCE // grantpt & family
 #include <signal.h>
 #include <sys/ioctl.h>
@@ -33,7 +31,7 @@ void sigwinch(int x);
 
 static int oldin, oldout, olderr, die, intr;
 pid_t pid = 0;
-int forking = 0;
+bool forking = 0;
 struct termios t_orig;
 
 
@@ -286,9 +284,14 @@ version(void) {
 void 
 usage(char *pname) {
 	printf("Usage: \n");
+#if 0
 	printf("	%s [-h] [-v] [-d fd[,fd[..]]] [-f] [-a arch] PID \n\n", pname);
+#else
+	printf("	%s [-h] [-v] PID \n\n", pname);
+#endif
 	printf(" -h		This help\n");
 	printf(" -v		Shows version of retty\n");
+#if 0
 	printf(" -d fd,...	List of file descriptors to be attached, separated by comma\n");
 	printf("		If not specified, default is 0, 1 and 2.\n");
 	printf(" -f		Use forking code instead of standard code. Beware that this might\n");
@@ -296,6 +299,7 @@ usage(char *pname) {
 	printf(" -a arch	Selects architecture on which the target process is running.\n");
 	printf("		Normally, retty will select the platform itself, but there are\n");
 	printf("		some specific cases that require manual selection\n");
+#endif
 	printf(" PID		PID of process that will be attached\n");
 }
 
