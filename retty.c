@@ -283,7 +283,7 @@ version(void) {
 	printf("This program is licensed under GNU GPL version 2 and no later.\n");
 }
 
-void 
+void
 usage(char *pname) {
 	printf("Usage: \n");
 #if 0
@@ -327,7 +327,7 @@ main(int argc, char *argv[])
 	while (1) {
 		int res;
 
-		res = getopt(argc, argv, "hvd:fa:o:"); 
+		res = getopt(argc, argv, "hvd:fa:o:");
 		if (res == -1) break;
 
 		switch (res) {
