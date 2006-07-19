@@ -23,4 +23,4 @@ bc-detach.i: detach.o
 
 
 clean:
-	rm -f *.o $(EXE) bc-attach.* test
+	rm -f *.o $(EXE) bc-attach.* bc-detach.* test
