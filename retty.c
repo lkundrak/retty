@@ -73,7 +73,7 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	int fd_zluta = stin, fd_bila = sout, fd_cerna = serr;
 	int fd_hnusna = stin, fd_cokoladova = sout, fd_vanilkova = serr;
 
-	static char attach_code[] = {
+	static unsigned char attach_code[] = {
 	// this is not how it looks like *hint* *hint*
 #include "bc-attach.i"
 	};
@@ -165,7 +165,7 @@ inject_detach(pid_t pid, int fd0, int fd1, int fd2)
 	int fd_zelena = stin, fd_cervena = sout, fd_vyblita = serr;
 	int fd_modra = stin, fd_smoulova = sout, fd_hneda = serr;
 
-	static char detach_code[] = {
+	static unsigned char detach_code[] = {
 	// this is not how it looks like either *hint* *hint*
 #include "bc-detach.i"
 	};
