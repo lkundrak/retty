@@ -32,6 +32,7 @@
 void sigwinch(int x);
 
 static int oldin, oldout, olderr, die, intr;
+int sin = 0, sout = 1, serr = 2;
 pid_t pid = 0;
 bool forking = 0;
 struct termios t_orig;
@@ -286,23 +287,16 @@ version(void) {
 void
 usage(char *pname) {
 	printf("Usage: \n");
-#if 0
-	printf("	%s [-h] [-v] [-d fd[,fd[..]]] [-f] [-a arch] PID \n\n", pname);
-#else
-	printf("	%s [-h] [-v] PID \n\n", pname);
-#endif
+	printf("	%s [-h] [-v] [-0 fd] [-1 fd] [-2 fd] PID \n\n", pname);
+
 	printf(" -h		This help\n");
-	printf(" -v		Shows version of retty\n");
-#if 0
-	printf(" -d fd,...	List of file descriptors to be attached, separated by comma\n");
-	printf("		If not specified, default is 0, 1 and 2.\n");
-	printf(" -f		Use forking code instead of standard code. Beware that this might\n");
-	printf("		cause some very unexpected behaviour.\n");
-	printf(" -a arch	Selects architecture on which the target process is running.\n");
-	printf("		Normally, retty will select the platform itself, but there are\n");
-	printf("		some specific cases that require manual selection\n");
-#endif
-	printf(" PID		PID of process that will be attached\n");
+	printf(" -v		Shows version of retty\n\n");
+
+	printf(" -0 fd		Specify input file descriptor of target process (default 0)\n");
+	printf(" -1 fd		Specify output file descriptor of target process (default 1)\n");
+	printf(" -2 fd		Specify error file descriptor of target process (default 2)\n\n");
+
+	printf(" PID		PID of process that will be attached (required)\n");
 }
 
 void
@@ -326,8 +320,9 @@ main(int argc, char *argv[])
 
 	while (1) {
 		int res;
+		char *c;
 
-		res = getopt(argc, argv, "hvd:fa:o:");
+		res = getopt(argc, argv, "hv0:1:2:");
 		if (res == -1) break;
 
 		switch (res) {
@@ -341,17 +336,28 @@ main(int argc, char *argv[])
 				exit(EXIT_SUCCESS);
 				break;
 
-			case 'd':
-				fprintf(stderr, "File descriptor alteration not yet implemented\n");
+			case '0':
+				sin = strtol(optarg, &c, 10);
+				if ((*optarg == '\0') || (*c != '\0')) {
+					fprintf(stderr, "Wrong stdin specification\n");
+					exit(EXIT_FAILURE);
+				}
 				break;
 
-			case 'f':
-				fprintf(stderr, "Forking not yet implemented\n");
-				forking = 1;
+			case '1':
+				sout = strtol(optarg, &c, 10);
+				if ((*optarg == '\0') || (*c != '\0')) {
+					fprintf(stderr, "Wrong stdout specification\n");
+					exit(EXIT_FAILURE);
+				}
 				break;
 
-			case 'a':
-				fprintf(stderr, "Architecture selection not yet implemented\n");
+			case '2':
+				serr = strtol(optarg, &c, 10);
+				if ((*optarg == '\0') || (*c != '\0')) {
+					fprintf(stderr, "Wrong stderr specification\n");
+					exit(EXIT_FAILURE);
+				}
 				break;
 
 			default:
