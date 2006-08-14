@@ -1,0 +1,21 @@
+This README file is just stub. You will find real information on the manpage
+included in this package.
+
+Warning:
+--------
+
+This program is for Linux and ix86 only. Don't run it on any other OS or
+any other architecture, or it _WILL_ crash your applications. It should
+run well on 32bit distributions running on amd64, but definitely not 64bit
+distributions.
+
+Build:
+------
+
+make
+
+Usage:
+------
+
+man ./retty.1
+
