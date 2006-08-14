@@ -18,14 +18,41 @@ the process can be used on the original terminal again (multiple subsequent
 retty attachments of a single process are possible, but the process does I/O
 only on the last one).
 
-You can also use escapes to detach a process and possibly do other things.
-The escape character is "`" (lowercase of "~") and "`h" will give you list
-of possible escape sequences. The escape character must be immediately
+You can also use escape sequences to detach a process and possibly do other
+things. The escape character is "`" (lowercase of "~") and "`h" will give you
+list of possible escape sequences. The escape character must be immediately
 preceded by an enter.
 
+By default, retty attaches file descriptors 0, 1 and 2 of process. That should
+be enough in most cases, but will not do in others (most notably \fIless\fP).
+In such case, you have to check /proc/<PID>/fd and force retty to attach correct
+file descriptors instead.
+
 .RE
-.SH "SEE ALSO"
-screen(1)
+.SH OPTIONS
+.TP
+.B "\-v"
+Display version information.
+.TP
+.B "\-h"
+Display usage information.
+.TP
+.B "\-0 fd"
+Specify file descriptor that process we want to attach uses as input.
+Default value is 0 (stdin).
+.TP
+.B "\-1 fd"
+Specify file descriptor that process we want to attach uses as output.
+Default value is 1 (stdout).
+.TP
+.B "\-2 fd"
+Specify file descriptor that process we want to attach uses for error
+outputs. Default value is 2 (stderr).
+.TP
+.B PID
+PID of process that we want to attach. If retty is run as ordinary user,
+it can attach only processes owned by that user. If run as root, retty
+can attach probably anything (not always good idea).
 
 .RE
 .SH BUGS
@@ -45,3 +72,7 @@ If you attach
 .I bash
 it imagines EOF on stdin. Attaching and detaching multiple times without
 any activity in the meantime will cause it to die.
+
+.RE
+.SH "SEE ALSO"
+screen(1)
