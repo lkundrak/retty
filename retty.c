@@ -32,7 +32,7 @@
 void sigwinch(int x);
 
 static int oldin, oldout, olderr, die, intr;
-int sin = 0, sout = 1, serr = 2;
+int stin = 0, sout = 1, serr = 2;
 pid_t pid = 0;
 bool forking = 0;
 struct termios t_orig;
@@ -337,7 +337,7 @@ main(int argc, char *argv[])
 				break;
 
 			case '0':
-				sin = strtol(optarg, &c, 10);
+				stin = strtol(optarg, &c, 10);
 				if ((*optarg == '\0') || (*c != '\0')) {
 					fprintf(stderr, "Wrong stdin specification\n");
 					exit(EXIT_FAILURE);
