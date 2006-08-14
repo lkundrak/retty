@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 state=0
 while read X; do
