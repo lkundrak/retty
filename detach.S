@@ -41,47 +41,6 @@ detach:
 	sub	$sizeof_termios, %esp
 
 
-/*
-	mov	$SYS_ioctl, %eax
-	mov	$0, %ebx
-	mov 	$TCGETS, %ecx
-	lea	-sizeof_termios(%ebp), %edx
-	int	$0x80
-
-	mov	$SYS_ioctl, %eax
-	mov	0x24(%ebp), %ebx
-	mov	$TCSETS, %ecx
-	lea	-sizeof_termios(%ebp), %edx
-	int	$0x80
-
-
-	mov	$SYS_ioctl, %eax
-	mov	$1, %ebx
-	mov 	$TCGETS, %ecx
-	lea	-sizeof_termios(%ebp), %edx
-	int	$0x80
-
-	mov	$SYS_ioctl, %eax
-	mov	0x28(%ebp), %ebx
-	mov	$TCSETS, %ecx
-	lea	-sizeof_termios(%ebp), %edx
-	int	$0x80
-
-
-	mov	$SYS_ioctl, %eax
-	mov	$2, %ebx
-	mov 	$TCGETS, %ecx
-	lea	-sizeof_termios(%ebp), %edx
-	int	$0x80
-
-	mov	$SYS_ioctl, %eax
-	mov	0x2c(%ebp), %ebx
-	mov	$TCSETS, %ecx
-	lea	-sizeof_termios(%ebp), %edx
-	int	$0x80
-*/
-
-
 	mov	$SYS_close, %eax
 	mov	$0x0, %ebx
 	int	$0x80
