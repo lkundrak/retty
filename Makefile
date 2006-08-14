@@ -16,10 +16,10 @@ retty: retty.o
 retty.o: bc-attach.i bc-detach.i
 
 bc-attach.i: attach.o
-	objdump -j .text -d $^ | ./bytecode.sh >$@
+	objdump -j .text -d $^ | ./bytecode.pl >$@
 
 bc-detach.i: detach.o
-	objdump -j .text -d $^ | ./bytecode.sh >$@
+	objdump -j .text -d $^ | ./bytecode.pl >$@
 
 
 clean:
