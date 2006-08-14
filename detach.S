@@ -42,30 +42,36 @@ detach:
 
 
 	mov	$SYS_close, %eax
+zelena:
 	mov	$0x0, %ebx
 	int	$0x80
 
 	mov	$SYS_close, %eax
+cervena:
 	mov	$0x1, %ebx
 	int	$0x80
 
 	mov	$SYS_close, %eax
+modra:
 	mov	$0x2, %ebx
 	int	$0x80
 
 
 	mov	$SYS_dup2, %eax
 	mov	0x2c(%ebp), %ebx
+vyblita:
 	mov	$0x0, %ecx
 	int	$0x80
 
 	mov	$SYS_dup2, %eax
 	mov	0x28(%ebp), %ebx
+smoulova:
 	mov	$0x1, %ecx
 	int	$0x80
 
 	mov	$SYS_dup2, %eax
 	mov	0x24(%ebp), %ebx
+hneda:
 	mov	$0x2, %ecx
 	int	$0x80
 

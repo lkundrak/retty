@@ -61,6 +61,7 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	int waitst;
 
 	static char attach_code[] = {
+	// this is not how it looks like *hint* *hint*
 #include "bc-attach.i"
 	};
 
@@ -149,6 +150,7 @@ inject_detach(pid_t pid, int fd0, int fd1, int fd2)
 	unsigned long codeaddr;
 
 	static char detach_code[] = {
+	// this is not how it looks like either *hint* *hint*
 #include "bc-detach.i"
 	};
 

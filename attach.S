@@ -51,29 +51,35 @@ attach:
 	push	%eax	/* fd of the terminal */
 
 	mov	$SYS_dup, %eax
+cervena:
 	mov	$0x0, %ebx
 	int	$0x80
 	push	%eax	/* old stdin */
 
 	mov	$SYS_dup, %eax
+zelena:
 	mov	$0x1, %ebx
 	int	$0x80
 	push	%eax	/* old stdout */
 
 	mov	$SYS_dup, %eax
+modra:
 	mov	$0x2, %ebx
 	int	$0x80
 	push	%eax	/* old stderr */
 
 	mov	$SYS_close, %eax
+fialova:
 	mov	$0x0, %ebx
 	int	$0x80
 
 	mov	$SYS_close, %eax
+oranzova:
 	mov	$0x1, %ebx
 	int	$0x80
 
 	mov	$SYS_close, %eax
+bezova:
 	mov	$0x2, %ebx
 	int	$0x80
 
@@ -81,14 +87,17 @@ attach:
 	mov	0xc(%esp), %ebx /* pts fd */
 
 	mov	$SYS_dup2, %eax
+zluta:
 	mov	$0x0, %ecx
 	int	$0x80
 
 	mov	$SYS_dup2, %eax
+bila:
 	mov	$0x1, %ecx
 	int	$0x80
 
 	mov	$SYS_dup2, %eax
+cerna:
 	mov	$0x2, %ecx
 	int	$0x80
 
@@ -104,6 +113,7 @@ attach:
 	int	$0x80
 
 	mov	$SYS_ioctl, %eax
+hnusna:
 	mov	$2, %ebx
 	mov	$TCSETS, %ecx
 	lea	-sizeof_termios(%ebp), %edx
@@ -117,6 +127,7 @@ attach:
 	int	$0x80
 
 	mov	$SYS_ioctl, %eax
+cokoladova:
 	mov	$1, %ebx
 	mov	$TCSETS, %ecx
 	lea	-sizeof_termios(%ebp), %edx
@@ -130,6 +141,7 @@ attach:
 	int	$0x80
 
 	mov	$SYS_ioctl, %eax
+vanilkova:
 	mov	$0, %ebx
 	mov	$TCSETS, %ecx
 	lea	-sizeof_termios(%ebp), %edx

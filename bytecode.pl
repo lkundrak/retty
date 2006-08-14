@@ -13,6 +13,15 @@ while ($l = <>) {
 			$a =~ s/[^0-9a-f]//g;
 			$a =~ s/([0-9a-f]{2})/0x\1,/g;
 			printf("/* %04s */\t%-30s\t/* \%s */\n", $c, $a, $b);
+		} elsif ($l =~ /^([0-9a-f]+) <(\S+)>:\s*$/) {
+			push (@id, [$2, $1]);
 		}
 	}
 }
+
+print "};\n";
+foreach my $i (@id) {
+	my ($id, $ofs) = @$i;
+	print "const off_t ofs_$id = 0x$ofs;\n";
+}
+print "{\n";
