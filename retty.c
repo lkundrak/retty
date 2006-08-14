@@ -7,6 +7,14 @@
  * retty works on x86 Linux.
  *
  * Copyright (c) 2006  Petr Baudis, Jan Sembera
+ *
+ * ./-~~-\.
+ * | o  o |
+ * |  vv  |
+ * \_.  ._/
+ * \_>  <_/
+ * |_/..\_|
+ *   /  \
  */
 
 #define _GNU_SOURCE // grantpt & family
