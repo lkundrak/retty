@@ -13,9 +13,12 @@ is a simple tool which will let you attach process currently running on
 another terminal. Unlike screen, you need to make no special provisions
 in advance - just get the process' pid and attach it anytime.
 
-Non-violently killing retty should provide for a proper detach - after that,
+Non-violently killing
+.B retty
+should provide for a proper detach - after that,
 the process can be used on the original terminal again (multiple subsequent
-retty attachments of a single process are possible, but the process does I/O
+.B retty
+attachments of a single process are possible, but the process does I/O
 only on the last one).
 
 You can also use escape sequences to detach a process and possibly do other
@@ -23,10 +26,14 @@ things. The escape character is "`" (lowercase of "~") and "`h" will give you
 list of possible escape sequences. The escape character must be immediately
 preceded by an enter.
 
-By default, retty attaches file descriptors 0, 1 and 2 of process. That should
-be enough in most cases, but will not do in others (most notably \fIless\fP).
-In such case, you have to check /proc/<PID>/fd and force retty to attach correct
-file descriptors instead.
+By default,
+.B retty
+attaches file descriptors 0, 1 and 2 of process. That should
+be enough in most cases, but will not do in some special ones. In such case,
+you have to check /proc/<PID>/fd and force
+.B retty
+to attach correct file
+descriptors instead.
 
 .RE
 .SH OPTIONS
@@ -65,13 +72,19 @@ The attached process' controlling terminal is not switched appropriately,
 which causes many funny effects (e.g.
 .I mutt
 not properly adjusting for your
-window size), annoying bugs (ctrl-c not delivered properly) and totally
-breaking attaching for some applications (OpenSSH).
+window size, but this can be fixed by going into editor and back), annoying
+bugs (ctrl+c not delivered properly) and totally breaking attaching for
+some applications (OpenSSH).
 .IP \(bu
 If you attach
 .I bash
 it imagines EOF on stdin. Attaching and detaching multiple times without
 any activity in the meantime will cause it to die.
+.IP \(bu
+Attempts to attach
+.I less
+just don't work even with input fd override. This might or might not be
+fixed in the future, depending on cause (which is unknown now).
 
 .RE
 .SH "SEE ALSO"
