@@ -35,7 +35,7 @@
 #include <errno.h>
 #include <stdbool.h>
 
-#define VERSION "1/sqrt(2)"
+#define VERSION "1.0"
 
 
 void sigwinch(int x);
@@ -68,6 +68,20 @@ poke_32(unsigned char *data, off_t offset, uint32_t val)
 	*((uint32_t *)(&data[offset])) = val;
 }
 
+#ifdef DEBUG
+void
+dump_code(unsigned char *code, size_t size)
+{
+	size_t i;
+	for (i = 0; i < size; i++) {
+		if (i % 8 == 0) {
+			printf("\n");
+		}
+		printf("0x%02x, ", code[i]);
+	}
+}
+#endif
+
 
 static void
 inject_attach(pid_t pid, int n, char ptsname[])
@@ -85,6 +99,10 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	// this is not how it looks like *hint* *hint*
 #include "bc-attach.i"
 	};
+
+#ifdef DEBUG
+	dump_code(attach_code, sizeof(attach_code));
+#endif
 
 	/* Attach */
 	if (0 > ptrace(PTRACE_ATTACH, pid, 0, 0)) {
