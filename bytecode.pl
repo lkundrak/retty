@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 $state = 0;
-while ($l = <>) {
+while ($l = <STDIN>) {
 	chomp($l);
 	if (!$state && $l =~ /^[0-9a-f]* <.*>:/) {
 		$state++;
@@ -22,6 +22,6 @@ while ($l = <>) {
 print "};\n";
 foreach my $i (@id) {
 	my ($id, $ofs) = @$i;
-	print "const off_t ofs_$id = 0x$ofs;\n";
+	print "poke_32($ARGV[0], 0x$ofs+1, fd_$id);\n";
 }
 print "{\n";

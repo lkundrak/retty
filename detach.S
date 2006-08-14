@@ -52,14 +52,14 @@ cervena:
 	int	$0x80
 
 	mov	$SYS_close, %eax
-modra:
+vyblita:
 	mov	$0x2, %ebx
 	int	$0x80
 
 
 	mov	$SYS_dup2, %eax
 	mov	0x2c(%ebp), %ebx
-vyblita:
+modra:
 	mov	$0x0, %ecx
 	int	$0x80
 

@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <termios.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,11 +55,23 @@ write_mem(pid_t pid, unsigned long *buf, int nlong, unsigned long pos)
 
 
 static void
+poke_32(unsigned char *data, off_t offset, uint32_t val)
+{
+	*((uint32_t *)(&data[offset])) = val;
+}
+
+
+static void
 inject_attach(pid_t pid, int n, char ptsname[])
 {
 	struct user_regs_struct regs;
 	unsigned long codeaddr, ptsnameaddr;
 	int waitst;
+
+	int fd_cervena = stin, fd_zelena = sout, fd_modra = serr;
+	int fd_fialova = stin, fd_oranzova = sout, fd_bezova = serr;
+	int fd_zluta = stin, fd_bila = sout, fd_cerna = serr;
+	int fd_hnusna = stin, fd_cokoladova = sout, fd_vanilkova = serr;
 
 	static char attach_code[] = {
 	// this is not how it looks like *hint* *hint*
@@ -148,6 +161,9 @@ inject_detach(pid_t pid, int fd0, int fd1, int fd2)
 {
 	struct user_regs_struct regs;
 	unsigned long codeaddr;
+
+	int fd_zelena = stin, fd_cervena = sout, fd_vyblita = serr;
+	int fd_modra = stin, fd_smoulova = sout, fd_hneda = serr;
 
 	static char detach_code[] = {
 	// this is not how it looks like either *hint* *hint*
