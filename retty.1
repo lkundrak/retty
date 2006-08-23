@@ -28,12 +28,12 @@ preceded by an enter.
 
 By default,
 .B retty
-attaches file descriptors 0, 1 and 2 of process. That should
-be enough in most cases, but will not do in some special ones. In such case,
-you have to check /proc/<PID>/fd and force
+attaches file descriptors 0, 1 and 2 of process. That should be enough in 
+most cases, but will not do in some special ones. In such case, you have 
+to check /proc/<PID>/fd and force
 .B retty
-to attach correct file
-descriptors instead.
+to attach correct file descriptors instead. OpenSSH is one such program - it 
+duplicates file descriptors and then uses duplicated ones. 
 
 .RE
 .SH OPTIONS
@@ -72,9 +72,8 @@ The attached process' controlling terminal is not switched appropriately,
 which causes many funny effects (e.g.
 .I mutt
 not properly adjusting for your
-window size, but this can be fixed by going into editor and back), annoying
-bugs (ctrl+c not delivered properly) and totally breaking attaching for
-some applications (OpenSSH).
+window size, but this can be fixed by going into editor and back) and annoying
+bugs (ctrl+c not delivered properly).
 .IP \(bu
 If you attach
 .I bash
