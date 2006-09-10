@@ -16,10 +16,12 @@ in advance - just get the process' pid and attach it anytime.
 Non-violently killing
 .B retty
 should provide for a proper detach - after that,
-the process can be used on the original terminal again (multiple subsequent
+the process can be used on the original terminal again. Multiple subsequent
 .B retty
 attachments of a single process are possible, but the process does I/O
-only on the last one).
+only on the last one - don't forget to detach them in the right sequence,
+or your application will break (in this case, it is maybe better to attach
+already running retty than attaching single application twice).
 
 You can also use escape sequences to detach a process and possibly do other
 things. The escape character is "`" (lowercase of "~") and "`h" will give you
@@ -28,8 +30,8 @@ preceded by an enter.
 
 By default,
 .B retty
-attaches file descriptors 0, 1 and 2 of process. That should be enough in 
-most cases, but will not do in some special ones. In such case, you have 
+attaches file descriptors 0, 1 and 2 of the process. That should be enough 
+in most cases, but will not do in some special ones. In such case, you have 
 to check /proc/<PID>/fd and force
 .B retty
 to attach correct file descriptors instead. OpenSSH is one such program - it 
