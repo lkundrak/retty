@@ -17,6 +17,13 @@
  *   /  \
  */
 
+/*
+ * 'So!' cried Denethor. 'Thou hadst already stolen half my son's love.  Now
+ * thou stealest the hearts of my knights also, so that they rob me wholly of
+ * my son at the last. But in this at least thou shalt not defy my will: to
+ * rule my own end.'
+ */
+
 #define _GNU_SOURCE // grantpt & family
 #include <signal.h>
 #include <sys/ioctl.h>

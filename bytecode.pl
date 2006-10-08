@@ -1,5 +1,11 @@
 #!/usr/bin/perl
 
+# 'There are evil things written on this hilt,' he said; 'though maybe your
+# eyes cannot see them. Keep it, Aragorn, till we reach the house of Elrond!
+# But be wary, and handle it as little as you may! Alas! the wounds of this
+# weapon are beyond my skill to heal. I will do what I can - but all the more
+# do I urge you now to go on without rest.'
+
 $state = 0;
 while ($l = <STDIN>) {
 	chomp($l);

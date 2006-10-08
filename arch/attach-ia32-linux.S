@@ -2,6 +2,13 @@
 /* When you modify it, check that the length is dword-aligned. */
 
 
+/*
+ * Thrice he cried. Thrice the great ram boomed. And suddenly  upon the last
+ * stroke the Gate of Gondor broke. As if stricken by some blasting spell it
+ * burst asunder: there was a flash of searing lightning, and the doors
+ * tumbled in riven fragments to the ground.
+ */
+
 	.equ	SYS_open,	5
 	.equ	SYS_close,	6
 	.equ	SYS_getpid,	20

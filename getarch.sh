@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# 'Ah yes, I recognized the name. I recollect the time when young Frodo Baggins
+# was one of the worst young rascals of Buckland. But it wasn't mushrooms I was
+# thinking of. I had just heard the name Baggins before you turned up. What do
+# you think that funny customer asked me?'
+
 check_support() {
   if [ ! -f arch/attach-$1.[cS] ]; then
     ARCH="none"
