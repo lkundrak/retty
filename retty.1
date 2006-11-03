@@ -13,6 +13,18 @@ is a simple tool which will let you attach process currently running on
 another terminal. Unlike screen, you need to make no special provisions
 in advance - just get the process' pid and attach it anytime.
 
+Before using
+.B retty
+on a given application on a given system the first time, please make sure
+it works on the system and for the application (start another instance and
+try to attach it). It is unfortunately quite fragile and if your setup does
+not match its taste, it can even crash the attached application. Some
+applications won't work because they do I/O on other fds than 0, 1, 2 (that's
+fixable), some applications won't work because they do I/O on
+.B /dev/tty
+(that's unfixable without kernel changes).
+.B Trying to run retty on a kernel with security patches applied (non-exec stack in particular) will result in the attached process segfaulting immediatelly!
+
 Non-violently killing
 .B retty
 should provide for a proper detach - after that,
@@ -68,7 +80,7 @@ can attach probably anything (not always good idea).
 .PD
 .IP \(bu
 .I retty
-is x86-specific and works only on Linux.
+is x86-specific and works only on Linux with executable stack.
 .IP \(bu
 The attached process' controlling terminal is not switched appropriately,
 which causes many funny effects (e.g.
