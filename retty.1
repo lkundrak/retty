@@ -86,6 +86,25 @@ Attempts to attach
 .I less
 just don't work even with input fd override. This might or might not be
 fixed in the future, depending on cause (which is unknown now).
+.IP \(bu
+You must make sure both
+.I retty
+and the attached process run with the same uid. Running
+.I retty
+as root and attached process as regular user will
+.B NOT
+work.
+.I su
+to the same user first.
+(This is because
+.I retty
+makes the attached process open a tty created by
+.I retty
+which fails since the attached process has insufficient permissions.
+.I retty
+should check uid of the target process and
+.I chown
+the tty accordingly.)
 
 .RE
 .SH "SEE ALSO"
