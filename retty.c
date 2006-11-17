@@ -350,18 +350,6 @@ usage(char *pname) {
 	printf(" PID		PID of process that will be attached (required)\n");
 }
 
-void
-setpid(char *pidchar, char *argv) {
-	char *x;
-
-	pid = strtol(pidchar, &x, 0);
-	if ((!x) || (*x)) {
-		fprintf(stderr, "PID specified incorrectly. Aborting.\n");
-		usage(argv);
-		exit(EXIT_FAILURE);
-	}
-}
-
 int
 main(int argc, char *argv[])
 {
