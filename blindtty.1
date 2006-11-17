@@ -1,7 +1,7 @@
 .TH BLINDTTY 1 2006-11-14
 
 .SH NAME
-blindtty - Run command in a detached terminal
+blindtty - Run command in a blind terminal
 
 .SH SYNOPSIS
 .B blindtty CMD [ARGS]...
@@ -9,8 +9,19 @@ blindtty - Run command in a detached terminal
 .SH DESCRIPTION
 
 .B blindtty
-runs a command in a detached terminal.
-You might find it useful to run it as "setsid blindtty CMD...".
+runs a command in a blind terminal. This is very similar to redirecting
+all its I/O to /dev/null, but the application retains a perception of
+being ran on a terminal, even though it will not ever receive any input
+and noone will see its output. This is useful if you want to run an
+application "detached" now but want to attach it later using
+\fBretty(1)\fR.
+
+You might find it useful to run it as:
+.br
+.B setsid blindtty CMD...
+.br
+In that case it will really detach from your terminal and start a separate
+session.
 
 .RE
 .SH AUTHORS
