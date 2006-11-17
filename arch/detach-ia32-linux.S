@@ -2,6 +2,18 @@
 /* When you modify it, check that the length is dword-aligned. */
 
 
+/*
+ * Ghvn-buri-Ghvn squatted down and touched the earth with his horny brow
+ * in token of farewell. Then he got up as if to depart. But suddenly he stood
+ * looking up like some startled woodland animal snuffling a strange air.
+ * A light came in his eyes.
+ *
+ * 'Wind is changing!' he cried, and with that, in a twinkling as it seemed,
+ * he and his fellows had vanished into the glooms, never to be seen by any
+ * Rider of Rohan again.
+ */
+
+
 	.equ	SYS_close,	6
 	.equ	SYS_getpid,	20
 	.equ	SYS_kill,	37

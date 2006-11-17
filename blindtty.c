@@ -8,6 +8,14 @@
  * Copyright (c) 2006  Petr Baudis, Jan Sembera
  */
 
+/*
+ * 'But the night will be too short,' said Gandalf. 'I have come back here,
+ * for I must have a little peace, alone. You should sleep, in a bed while you
+ * still may. At the sunrise I shall take you to the Lord Denethor again. No,
+ * when the summons comes, not at sunrise. The Darkness has begun. There will
+ * be no dawn.'
+ */
+
 #include <pty.h>
 #include <signal.h>
 #include <stdio.h>
