@@ -11,8 +11,8 @@ Documentation:
 
 	man ./retty.1
 
-If you want to just run application detached only for attaching it with
-retty in future, you might find the blindtty tool useful, especially
-in connection with the setsid command which will do the detach part:
+If you want to just run an application detached only for attaching it with
+retty in the future, you might find the blindtty tool useful, especially
+in connection with the setsid command, which will do the detach part:
 
 	setsid blindtty <some command with arguments and so on>
