@@ -4,13 +4,15 @@ FULLARCH=$(ARCH)-$(OS)
 
 CFLAGS=-Wall -g -DARCH=$(ARCH) -DOS=$(OS)
 LIBS=-lutil
-LDFLAGS=$(LIBS)
 EXE=blindtty retty
 
 all: $(EXE)
 
 blindtty: blindtty.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 retty: retty.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 retty.o: bc-attach.i bc-detach.i
 
