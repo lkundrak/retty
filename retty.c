@@ -94,7 +94,7 @@ check_space(pid_t pid, long address, size_t range)
 }
 
 
-/* Write NLONG 4 byte words from BUF into PID starting
+/* Write NLONG words from BUF into PID starting
    at address POS.  Calling process must be attached to PID. */
 static int
 write_mem(pid_t pid, unsigned long *buf, int nlong, unsigned long pos)
@@ -103,13 +103,13 @@ write_mem(pid_t pid, unsigned long *buf, int nlong, unsigned long pos)
 	int i;
 
 	for (p = buf, i = 0; i < nlong; p++, i++)
-		if (0 > ptrace(PTRACE_POKEDATA, pid, pos+(i*4), *p))
+		if (0 > ptrace(PTRACE_POKEDATA, pid, pos+(i*sizeof(long)), *p))
 			return -1;
 	return 0;
 }
 
 
-/* Read NLONG 4 byte words from BUF into PID starting
+/* Read NLONG words from BUF into PID starting
    at address POS.  Calling process must be attached to PID. */
 static int
 read_mem(pid_t pid, unsigned long *buf, int nlong, unsigned long pos)
@@ -118,7 +118,7 @@ read_mem(pid_t pid, unsigned long *buf, int nlong, unsigned long pos)
 	int i;
 
 	for (p = buf, i = 0; i < nlong; p++, i++) {
-		*p = ptrace(PTRACE_PEEKDATA, pid, pos+(i*4), NULL);
+		*p = ptrace(PTRACE_PEEKDATA, pid, pos+(i*sizeof(long)), NULL);
 		if (*p == -1 && errno)
 			return -1;
 	}
@@ -193,19 +193,19 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	}
 
 	/* push EIP */
-	regs.SP_REG -= 4;
+	regs.SP_REG -= sizeof(long);
 	ptrace(PTRACE_POKEDATA, pid, regs.SP_REG, regs.PC_REG);
 
 	/* finish code and push it */
-	printf("codesize: %x codeaddr: %lx\n", sizeof(attach_code), oldregs.PC_REG);
-	*((int*)&attach_code[sizeof(attach_code)-5]) = sizeof(attach_code) + n*4 + 4;
+	printf("codesize: %zx codeaddr: %lx\n", sizeof(attach_code), oldregs.PC_REG);
+	*((int*)&attach_code[sizeof(attach_code)-5]) = sizeof(attach_code) + n*sizeof(long) + sizeof(long);
 	if (0 > write_mem(pid, (unsigned long*)&attach_code, sizeof(attach_code)/sizeof(long), regs.PC_REG)) {
 		fprintf(stderr, "cannot write attach_code\n");
 		exit(1);
 	}
 
 	/* push ptsname[] */
-	regs.SP_REG -= n*4;
+	regs.SP_REG -= n*sizeof(long);
 	ptsnameaddr = regs.SP_REG;
 	if (0 > write_mem(pid, (unsigned long*)ptsname, n, regs.SP_REG)) {
 		fprintf(stderr, "cannot write bla argument (%s)\n",
@@ -215,7 +215,7 @@ inject_attach(pid_t pid, int n, char ptsname[])
 
 	/* push ptsname */
 	/* FIXME: This is superfluous now, change bytecode to use lea */
-	regs.SP_REG -= 4;
+	regs.SP_REG -= sizeof(long);
 	ptrace(PTRACE_POKEDATA, pid, regs.SP_REG, ptsnameaddr);
 
 	/* This just needs to be modified, so that we force a possible ongoing
@@ -304,12 +304,12 @@ inject_detach(pid_t pid, int fd0, int fd1, int fd2)
 	}
 
 	/* push EIP */
-	regs.SP_REG -= 4;
+	regs.SP_REG -= sizeof(long);
 	ptrace(PTRACE_POKEDATA, pid, regs.SP_REG, regs.PC_REG);
 
 	/* finish code and push it */
-	printf("codesize: %x codeaddr: %lx\n", sizeof(detach_code), regs.PC_REG);
-	*((int*)&detach_code[sizeof(detach_code)-5]) = sizeof(detach_code) + 4 + 4 + 4;
+	printf("codesize: %zx codeaddr: %lx\n", sizeof(detach_code), regs.PC_REG);
+	*((int*)&detach_code[sizeof(detach_code)-5]) = sizeof(detach_code) + sizeof(long) + sizeof(long) + sizeof(long);
 	if (0 > write_mem(pid, (unsigned long*)&detach_code, sizeof(detach_code)/sizeof(long), regs.PC_REG)) {
 		fprintf(stderr, "cannot write detach_code\n");
 		exit(1);
@@ -317,14 +317,14 @@ inject_detach(pid_t pid, int fd0, int fd1, int fd2)
 
         /* This just needs to be modified, so that we force a possible ongoing
          * syscall to terminate. */
-        regs.PC_REG += 4;
+        regs.PC_REG += 8;
 
 	/* push fds */
-	regs.SP_REG -= 4;
+	regs.SP_REG -= sizeof(long);
 	ptrace(PTRACE_POKEDATA, pid, regs.SP_REG, fd0);
-	regs.SP_REG -= 4;
+	regs.SP_REG -= sizeof(long);
 	ptrace(PTRACE_POKEDATA, pid, regs.SP_REG, fd1);
-	regs.SP_REG -= 4;
+	regs.SP_REG -= sizeof(long);
 	ptrace(PTRACE_POKEDATA, pid, regs.SP_REG, fd2);
 
 	printf("stack: %lx pc: %lx sub:%x\n", regs.SP_REG, regs.PC_REG, (int) detach_code[sizeof(detach_code)-5]);
@@ -544,9 +544,9 @@ main(int argc, char *argv[])
 	//(void) ioctl(ptm, TIOCEXCL, (char *) 0);
 
 	n = strlen(pts)+1;
-	n = n/4 + (n%4 ? 1 : 0);
+	n = n/sizeof(unsigned long) + (n%sizeof(unsigned long) ? 1 : 0);
 	arg = malloc(n*sizeof(unsigned long));
-	memcpy(arg, pts, n*4);
+	memcpy(arg, pts, n*sizeof(unsigned long));
 
 	signal(SIGWINCH, sigwinch);
 	signal(SIGINT, sigint); // breaks stuff
