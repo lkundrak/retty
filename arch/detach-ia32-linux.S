@@ -1,5 +1,4 @@
 /* This is bytecode inserted on the stack of the attached application. */
-/* When you modify it, check that the length is dword-aligned. */
 
 
 /*

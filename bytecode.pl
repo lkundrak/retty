@@ -6,7 +6,10 @@
 # weapon are beyond my skill to heal. I will do what I can - but all the more
 # do I urge you now to go on without rest.'
 
+use Config;
+
 $state = 0;
+$bytes = 0;
 while ($l = <STDIN>) {
 	chomp($l);
 	if (!$state && $l =~ /^[0-9a-f]* <.*>:/) {
@@ -17,7 +20,7 @@ while ($l = <STDIN>) {
 			$a = $2;
 			$b = $3;
 			$a =~ s/[^0-9a-f]//g;
-			$a =~ s/([0-9a-f]{2})/0x\1,/g;
+			$bytes += $a =~ s/([0-9a-f]{2})/0x\1,/g;
 			printf("/* %04s */\t%-30s\t/* \%s */\n", $c, $a, $b);
 		} elsif ($l =~ /^([0-9a-f]+) <(\S+)>:\s*$/) {
 			push (@id, [$2, $1]);
@@ -25,6 +28,7 @@ while ($l = <STDIN>) {
 	}
 }
 
+print '0x00,' x ($Config{longsize} - ($bytes % $Config{longsize}));
 print "};\n";
 foreach my $i (@id) {
 	my ($id, $ofs) = @$i;
