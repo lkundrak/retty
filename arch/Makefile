@@ -4,6 +4,12 @@ attach-ia32-linux.o: arch/attach-ia32-linux.o
 detach-ia32-linux.o: arch/detach-ia32-linux.o
 	mv arch/detach-ia32-linux.o detach-ia32-linux.o
 
+attach-x86_64-linux.o: arch/attach-x86_64-linux.o
+	mv arch/attach-x86_64-linux.o attach-x86_64-linux.o
+
+detach-x86_64-linux.o: arch/detach-x86_64-linux.o
+	mv arch/detach-x86_64-linux.o detach-x86_64-linux.o
+
 attach-none-none.o: arch/attach-none-none.o
 
 detach-none-none.o: arch/detach-none-none.o

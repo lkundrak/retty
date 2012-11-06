@@ -1,3 +1,9 @@
+#if __x86_64
+#define SP_REG rsp
+#define PC_REG rip
+#define MOVSIZE 0x02
+#endif
+
 #ifdef __i386
 #define SP_REG esp
 #define PC_REG eip
