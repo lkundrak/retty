@@ -28,6 +28,6 @@ while ($l = <STDIN>) {
 print "};\n";
 foreach my $i (@id) {
 	my ($id, $ofs) = @$i;
-	print "poke_32($ARGV[0], 0x$ofs+1, fd_$id);\n";
+	print "poke_32($ARGV[0], 0x$ofs + 0x01, fd_$id);\n";
 }
 print "{\n";
