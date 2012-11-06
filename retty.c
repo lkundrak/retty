@@ -1,3 +1,8 @@
+#ifdef __i386
+#define SP_REG esp
+#define PC_REG eip
+#endif
+
 /* retty.c - attach process to current terminal
  *
  * Usage: retty PID
@@ -175,34 +180,34 @@ inject_attach(pid_t pid, int n, char ptsname[])
 
 	/* Back up memory and registers we're going to tamper with */
 	memcpy(&oldregs, &regs, sizeof(oldregs));
-	if (0 > read_mem(pid, (unsigned long*)&text_backup, sizeof(attach_code)/sizeof(long), oldregs.eip)) {
+	if (0 > read_mem(pid, (unsigned long*)&text_backup, sizeof(attach_code)/sizeof(long), oldregs.PC_REG)) {
 		fprintf(stderr, "cannot back up scratch memory\n");
 		exit(1);
 	}
 
 	/* Code injecting */
 
-	if (0 > check_space(pid, regs.eip, sizeof(attach_code) + 8)) {
+	if (0 > check_space(pid, regs.PC_REG, sizeof(attach_code) + 8)) {
 		fprintf(stderr, "The code would not fit in the executable mapping\n");
 		exit(1);
 	}
 
 	/* push EIP */
-	regs.esp -= 4;
-	ptrace(PTRACE_POKEDATA, pid, regs.esp, regs.eip);
+	regs.SP_REG -= 4;
+	ptrace(PTRACE_POKEDATA, pid, regs.SP_REG, regs.PC_REG);
 
 	/* finish code and push it */
-	printf("codesize: %x codeaddr: %lx\n", sizeof(attach_code), oldregs.eip);
+	printf("codesize: %x codeaddr: %lx\n", sizeof(attach_code), oldregs.PC_REG);
 	*((int*)&attach_code[sizeof(attach_code)-5]) = sizeof(attach_code) + n*4 + 4;
-	if (0 > write_mem(pid, (unsigned long*)&attach_code, sizeof(attach_code)/sizeof(long), regs.eip)) {
+	if (0 > write_mem(pid, (unsigned long*)&attach_code, sizeof(attach_code)/sizeof(long), regs.PC_REG)) {
 		fprintf(stderr, "cannot write attach_code\n");
 		exit(1);
 	}
 
 	/* push ptsname[] */
-	regs.esp -= n*4;
-	ptsnameaddr = regs.esp;
-	if (0 > write_mem(pid, (unsigned long*)ptsname, n, regs.esp)) {
+	regs.SP_REG -= n*4;
+	ptsnameaddr = regs.SP_REG;
+	if (0 > write_mem(pid, (unsigned long*)ptsname, n, regs.SP_REG)) {
 		fprintf(stderr, "cannot write bla argument (%s)\n",
 			strerror(errno));
 		exit(1);
@@ -210,13 +215,13 @@ inject_attach(pid_t pid, int n, char ptsname[])
 
 	/* push ptsname */
 	/* FIXME: This is superfluous now, change bytecode to use lea */
-	regs.esp -= 4;
-	ptrace(PTRACE_POKEDATA, pid, regs.esp, ptsnameaddr);
+	regs.SP_REG -= 4;
+	ptrace(PTRACE_POKEDATA, pid, regs.SP_REG, ptsnameaddr);
 
 	/* This just needs to be modified, so that we force a possible ongoing
 	 * syscall to terminate. */
-	regs.eip += 8;
-	printf("stack: %lx eip: %lx sub:%x\n", regs.esp, regs.eip, (int) attach_code[sizeof(attach_code)-5]);
+	regs.PC_REG += 8;
+	printf("stack: %lx pc: %lx sub:%x\n", regs.SP_REG, regs.PC_REG, (int) attach_code[sizeof(attach_code)-5]);
 
 	/* Run the bytecode */
 	ptrace(PTRACE_SETREGS, pid, 0, &regs);
@@ -236,14 +241,14 @@ inject_attach(pid_t pid, int n, char ptsname[])
 
 	/* Grab backed up fds from stack */
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
-	oldin = ptrace(PTRACE_PEEKDATA, pid, regs.esp + 0x8, NULL);
-	oldout = ptrace(PTRACE_PEEKDATA, pid, regs.esp + 0x4, NULL);
-	olderr = ptrace(PTRACE_PEEKDATA, pid, regs.esp + 0x0, NULL);
-	printf("oldfds (esp: %lx): %d, %d, %d\n", regs.esp, oldin, oldout, olderr);
+	oldin = ptrace(PTRACE_PEEKDATA, pid, regs.SP_REG + 0x8, NULL);
+	oldout = ptrace(PTRACE_PEEKDATA, pid, regs.SP_REG + 0x4, NULL);
+	olderr = ptrace(PTRACE_PEEKDATA, pid, regs.SP_REG + 0x0, NULL);
+	printf("oldfds (esp: %lx): %d, %d, %d\n", regs.SP_REG, oldin, oldout, olderr);
 
 	/* Restore registers and memory we clobbered */
 	ptrace(PTRACE_SETREGS, pid, 0, &oldregs);
-	if (0 > write_mem(pid, (unsigned long*)&text_backup, sizeof(text_backup)/sizeof(long), oldregs.eip)) {
+	if (0 > write_mem(pid, (unsigned long*)&text_backup, sizeof(text_backup)/sizeof(long), oldregs.PC_REG)) {
 		fprintf(stderr, "cannot restore scratch memory\n");
 		exit(1);
 	}
@@ -286,43 +291,43 @@ inject_detach(pid_t pid, int fd0, int fd1, int fd2)
 
         /* Back up memory and registers we're going to tamper with */
 	memcpy(&oldregs, &regs, sizeof(oldregs));
-        if (0 > read_mem(pid, (unsigned long*)&text_backup, sizeof(detach_code)/sizeof(long), oldregs.eip)) {
+        if (0 > read_mem(pid, (unsigned long*)&text_backup, sizeof(detach_code)/sizeof(long), oldregs.PC_REG)) {
                 fprintf(stderr, "cannot back up scratch memory\n");
                 exit(1);
         }
 
 	/* Code injecting */
 
-	if (0 > check_space(pid, regs.eip, sizeof(detach_code) + 8)) {
+	if (0 > check_space(pid, regs.PC_REG, sizeof(detach_code) + 8)) {
 		fprintf(stderr, "The code would not fit in the executable mapping\n");
 		exit(1);
 	}
 
 	/* push EIP */
-	regs.esp -= 4;
-	ptrace(PTRACE_POKEDATA, pid, regs.esp, regs.eip);
+	regs.SP_REG -= 4;
+	ptrace(PTRACE_POKEDATA, pid, regs.SP_REG, regs.PC_REG);
 
 	/* finish code and push it */
-	printf("codesize: %x codeaddr: %lx\n", sizeof(detach_code), regs.eip);
+	printf("codesize: %x codeaddr: %lx\n", sizeof(detach_code), regs.PC_REG);
 	*((int*)&detach_code[sizeof(detach_code)-5]) = sizeof(detach_code) + 4 + 4 + 4;
-	if (0 > write_mem(pid, (unsigned long*)&detach_code, sizeof(detach_code)/sizeof(long), regs.eip)) {
+	if (0 > write_mem(pid, (unsigned long*)&detach_code, sizeof(detach_code)/sizeof(long), regs.PC_REG)) {
 		fprintf(stderr, "cannot write detach_code\n");
 		exit(1);
 	}
 
         /* This just needs to be modified, so that we force a possible ongoing
          * syscall to terminate. */
-        regs.eip += 8;
+        regs.PC_REG += 4;
 
 	/* push fds */
-	regs.esp -= 4;
-	ptrace(PTRACE_POKEDATA, pid, regs.esp, fd0);
-	regs.esp -= 4;
-	ptrace(PTRACE_POKEDATA, pid, regs.esp, fd1);
-	regs.esp -= 4;
-	ptrace(PTRACE_POKEDATA, pid, regs.esp, fd2);
+	regs.SP_REG -= 4;
+	ptrace(PTRACE_POKEDATA, pid, regs.SP_REG, fd0);
+	regs.SP_REG -= 4;
+	ptrace(PTRACE_POKEDATA, pid, regs.SP_REG, fd1);
+	regs.SP_REG -= 4;
+	ptrace(PTRACE_POKEDATA, pid, regs.SP_REG, fd2);
 
-	printf("stack: %lx eip: %lx sub:%x\n", regs.esp, regs.eip, (int) detach_code[sizeof(detach_code)-5]);
+	printf("stack: %lx pc: %lx sub:%x\n", regs.SP_REG, regs.PC_REG, (int) detach_code[sizeof(detach_code)-5]);
 
 	/* Detach and continue */
 	ptrace(PTRACE_SETREGS, pid, 0, &regs);
@@ -342,7 +347,7 @@ inject_detach(pid_t pid, int fd0, int fd1, int fd2)
 
 	/* Restore registers and memory we clobbered */
 	ptrace(PTRACE_SETREGS, pid, 0, &oldregs);
-	if (0 > write_mem(pid, (unsigned long*)&text_backup, sizeof(text_backup)/sizeof(long), oldregs.eip)) {
+	if (0 > write_mem(pid, (unsigned long*)&text_backup, sizeof(text_backup)/sizeof(long), oldregs.PC_REG)) {
 		fprintf(stderr, "cannot restore scratch memory\n");
 		exit(1);
 	}
