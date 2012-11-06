@@ -32,6 +32,6 @@ print '0x00,' x ($Config{longsize} - ($bytes % $Config{longsize}));
 print "};\n";
 foreach my $i (@id) {
 	my ($id, $ofs) = @$i;
-	print "poke_32($ARGV[0], 0x$ofs + 0x01, fd_$id);\n";
+	print "poke($ARGV[0], 0x$ofs + MOVSIZE, fd_$id);\n";
 }
 print "{\n";

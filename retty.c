@@ -1,6 +1,7 @@
 #ifdef __i386
 #define SP_REG esp
 #define PC_REG eip
+#define MOVSIZE 0x01
 #endif
 
 /* retty.c - attach process to current terminal
@@ -127,9 +128,9 @@ read_mem(pid_t pid, unsigned long *buf, int nlong, unsigned long pos)
 
 
 static void
-poke_32(unsigned char *data, off_t offset, uint32_t val)
+poke(unsigned char *data, off_t offset, long val)
 {
-	*((uint32_t *)(&data[offset])) = val;
+	*((long *)(&data[offset])) = val;
 }
 
 #ifdef DEBUG
