@@ -69,6 +69,23 @@ write_mem(pid_t pid, unsigned long *buf, int nlong, unsigned long pos)
 }
 
 
+/* Read NLONG 4 byte words from BUF into PID starting
+   at address POS.  Calling process must be attached to PID. */
+static int
+read_mem(pid_t pid, unsigned long *buf, int nlong, unsigned long pos)
+{
+	unsigned long *p;
+	int i;
+
+	for (p = buf, i = 0; i < nlong; p++, i++) {
+		*p = ptrace(PTRACE_PEEKDATA, pid, pos+(i*4), NULL);
+		if (*p == -1 && errno)
+			return -1;
+	}
+	return 0;
+}
+
+
 static void
 poke_32(unsigned char *data, off_t offset, uint32_t val)
 {
@@ -93,8 +110,8 @@ dump_code(unsigned char *code, size_t size)
 static void
 inject_attach(pid_t pid, int n, char ptsname[])
 {
-	struct user_regs_struct regs;
-	unsigned long codeaddr, ptsnameaddr;
+	struct user_regs_struct regs, oldregs;
+	unsigned long ptsnameaddr;
 	int waitst;
 
 	int fd_cervena = stin, fd_zelena = sout, fd_modra = serr;
@@ -106,6 +123,8 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	// this is not how it looks like *hint* *hint*
 #include "bc-attach.i"
 	};
+
+	static unsigned char text_backup[sizeof(attach_code) / sizeof(attach_code[0])];
 
 #ifdef DEBUG
 	dump_code(attach_code, sizeof(attach_code));
@@ -119,6 +138,12 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	waitpid(pid, NULL, 0);
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
+	/* Back up memory and registers we're going to tamper with */
+	memcpy(&oldregs, &regs, sizeof(oldregs));
+	if (0 > read_mem(pid, (unsigned long*)&text_backup, sizeof(attach_code)/sizeof(long), oldregs.eip)) {
+		fprintf(stderr, "cannot back up scratch memory\n");
+		exit(1);
+	}
 
 	/* Code injecting */
 
@@ -127,11 +152,9 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	ptrace(PTRACE_POKEDATA, pid, regs.esp, regs.eip);
 
 	/* finish code and push it */
-	regs.esp -= sizeof(attach_code);
-	codeaddr = regs.esp;
-	printf("codesize: %x codeaddr: %lx\n", sizeof(attach_code), codeaddr);
+	printf("codesize: %x codeaddr: %lx\n", sizeof(attach_code), oldregs.eip);
 	*((int*)&attach_code[sizeof(attach_code)-5]) = sizeof(attach_code) + n*4 + 4;
-	if (0 > write_mem(pid, (unsigned long*)&attach_code, sizeof(attach_code)/sizeof(long), regs.esp)) {
+	if (0 > write_mem(pid, (unsigned long*)&attach_code, sizeof(attach_code)/sizeof(long), regs.eip)) {
 		fprintf(stderr, "cannot write attach_code\n");
 		exit(1);
 	}
@@ -150,7 +173,9 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	regs.esp -= 4;
 	ptrace(PTRACE_POKEDATA, pid, regs.esp, ptsnameaddr);
 
-	regs.eip = codeaddr+8;
+	/* This just needs to be modified, so that we force a possible ongoing
+	 * syscall to terminate. */
+	regs.eip += 8;
 	printf("stack: %lx eip: %lx sub:%x\n", regs.esp, regs.eip, (int) attach_code[sizeof(attach_code)-5]);
 
 	/* Run the bytecode */
@@ -176,6 +201,13 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	olderr = ptrace(PTRACE_PEEKDATA, pid, regs.esp + 0x0, NULL);
 	printf("oldfds (esp: %lx): %d, %d, %d\n", regs.esp, oldin, oldout, olderr);
 
+	/* Restore registers and memory we clobbered */
+	ptrace(PTRACE_SETREGS, pid, 0, &oldregs);
+	if (0 > write_mem(pid, (unsigned long*)&text_backup, sizeof(text_backup)/sizeof(long), oldregs.eip)) {
+		fprintf(stderr, "cannot restore scratch memory\n");
+		exit(1);
+	}
+
 	/* Let go */
 	ptrace(PTRACE_DETACH, pid, 0, (void*) SIGWINCH);
 }
@@ -194,8 +226,8 @@ try_detach() {
 static void
 inject_detach(pid_t pid, int fd0, int fd1, int fd2)
 {
-	struct user_regs_struct regs;
-	unsigned long codeaddr;
+	struct user_regs_struct regs, oldregs;
+	int waitst;
 
 	int fd_zelena = stin, fd_cervena = sout, fd_vyblita = serr;
 	int fd_modra = stin, fd_smoulova = sout, fd_hneda = serr;
@@ -205,11 +237,19 @@ inject_detach(pid_t pid, int fd0, int fd1, int fd2)
 #include "bc-detach.i"
 	};
 
+	static unsigned char text_backup[sizeof(detach_code) / sizeof(detach_code[0])];
+
 	/* Attach */
 	(void) try_detach();
 	waitpid(pid, NULL, 0);
 	ptrace(PTRACE_GETREGS, pid, 0, &regs);
 
+        /* Back up memory and registers we're going to tamper with */
+	memcpy(&oldregs, &regs, sizeof(oldregs));
+        if (0 > read_mem(pid, (unsigned long*)&text_backup, sizeof(detach_code)/sizeof(long), oldregs.eip)) {
+                fprintf(stderr, "cannot back up scratch memory\n");
+                exit(1);
+        }
 
 	/* Code injecting */
 
@@ -218,14 +258,16 @@ inject_detach(pid_t pid, int fd0, int fd1, int fd2)
 	ptrace(PTRACE_POKEDATA, pid, regs.esp, regs.eip);
 
 	/* finish code and push it */
-	regs.esp -= sizeof(detach_code);
-	codeaddr = regs.esp;
-	printf("codesize: %x codeaddr: %lx\n", sizeof(detach_code), codeaddr);
+	printf("codesize: %x codeaddr: %lx\n", sizeof(detach_code), regs.eip);
 	*((int*)&detach_code[sizeof(detach_code)-5]) = sizeof(detach_code) + 4 + 4 + 4;
-	if (0 > write_mem(pid, (unsigned long*)&detach_code, sizeof(detach_code)/sizeof(long), regs.esp)) {
+	if (0 > write_mem(pid, (unsigned long*)&detach_code, sizeof(detach_code)/sizeof(long), regs.eip)) {
 		fprintf(stderr, "cannot write detach_code\n");
 		exit(1);
 	}
+
+        /* This just needs to be modified, so that we force a possible ongoing
+         * syscall to terminate. */
+        regs.eip += 8;
 
 	/* push fds */
 	regs.esp -= 4;
@@ -235,14 +277,33 @@ inject_detach(pid_t pid, int fd0, int fd1, int fd2)
 	regs.esp -= 4;
 	ptrace(PTRACE_POKEDATA, pid, regs.esp, fd2);
 
-	regs.eip = codeaddr+8;
 	printf("stack: %lx eip: %lx sub:%x\n", regs.esp, regs.eip, (int) detach_code[sizeof(detach_code)-5]);
-
 
 	/* Detach and continue */
 	ptrace(PTRACE_SETREGS, pid, 0, &regs);
-	kill(pid, SIGWINCH); // interrupt any syscall (typically read() ;)
-	ptrace(PTRACE_DETACH, pid, 0, 0);
+
+	/* Interrupt a syscall */
+	ptrace(PTRACE_CONT, pid, 0, (void*) SIGSTOP);
+
+	sigwinch(0); // bytecode will raise another SIGWINCH later so it will get sync'd thru
+	do {
+		ptrace(PTRACE_CONT, pid, 0, (void*) 0);
+		wait(&waitst);
+		if (!WIFSTOPPED(waitst)) {
+			fprintf(stderr, "attached task not stopped\n");
+			exit(1);
+		}
+	} while (WSTOPSIG(waitst) != SIGWINCH);
+
+	/* Restore registers and memory we clobbered */
+	ptrace(PTRACE_SETREGS, pid, 0, &oldregs);
+	if (0 > write_mem(pid, (unsigned long*)&text_backup, sizeof(text_backup)/sizeof(long), oldregs.eip)) {
+		fprintf(stderr, "cannot restore scratch memory\n");
+		exit(1);
+	}
+
+	/* Let go */
+	ptrace(PTRACE_DETACH, pid, 0, (void*) SIGWINCH);
 }
 
 
