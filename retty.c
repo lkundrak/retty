@@ -54,6 +54,41 @@ bool forking = 0;
 struct termios t_orig;
 
 
+/* Find an executable mapping for given address and ensure it
+ * is big enough. */
+int
+check_space(pid_t pid, long address, size_t range)
+{
+	char fname[sizeof("/proc/XXXXX/maps")];
+	FILE *maps;
+	long begin, end;
+
+	sprintf(fname, "/proc/%d/maps", pid);
+	maps = fopen(fname, "r");
+	if (maps == NULL) {
+		perror(fname);
+		return -1;
+	}
+
+	while (fscanf(maps, "%lx-%lx %*[^\n]", &begin, &end) != EOF) {
+		if (begin > address || end < address)
+			/* Not the mapping we're looking for. */
+			continue;
+		if (end - address < range) {
+			/* Not enough space */
+			fclose(maps);
+			return -1;
+		}
+		fclose(maps);
+		return 0;
+	}
+
+	/* Range not mapped? */
+	fclose(maps);
+	return -1;
+}
+
+
 /* Write NLONG 4 byte words from BUF into PID starting
    at address POS.  Calling process must be attached to PID. */
 static int
@@ -146,6 +181,11 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	}
 
 	/* Code injecting */
+
+	if (0 > check_space(pid, regs.eip, sizeof(attach_code) + 8)) {
+		fprintf(stderr, "The code would not fit in the executable mapping\n");
+		exit(1);
+	}
 
 	/* push EIP */
 	regs.esp -= 4;
@@ -252,6 +292,11 @@ inject_detach(pid_t pid, int fd0, int fd1, int fd2)
         }
 
 	/* Code injecting */
+
+	if (0 > check_space(pid, regs.eip, sizeof(detach_code) + 8)) {
+		fprintf(stderr, "The code would not fit in the executable mapping\n");
+		exit(1);
+	}
 
 	/* push EIP */
 	regs.esp -= 4;
