@@ -153,13 +153,15 @@ inject_attach(pid_t pid, int n, char ptsname[])
 	regs.eip = codeaddr+8;
 	printf("stack: %lx eip: %lx sub:%x\n", regs.esp, regs.eip, (int) attach_code[sizeof(attach_code)-5]);
 
-
 	/* Run the bytecode */
 	ptrace(PTRACE_SETREGS, pid, 0, &regs);
+
+	/* Interrupt a syscall */
+	ptrace(PTRACE_CONT, pid, 0, (void*) SIGSTOP);
+
 	sigwinch(0); // bytecode will raise another SIGWINCH later so it will get sync'd thru
-	// interrupt any syscall with the WINCH (typically read() ;)
 	do {
-		ptrace(PTRACE_CONT, pid, 0, (void*) SIGWINCH);
+		ptrace(PTRACE_CONT, pid, 0, (void*) 0);
 		wait(&waitst);
 		if (!WIFSTOPPED(waitst)) {
 			fprintf(stderr, "attached task not stopped\n");
