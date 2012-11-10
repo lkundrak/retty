@@ -2,12 +2,14 @@
 #define SP_REG rsp
 #define PC_REG rip
 #define MOVSIZE 0x02
+#define MASK 0
 #endif
 
 #ifdef __i386
 #define SP_REG esp
 #define PC_REG eip
 #define MOVSIZE 0x01
+#define MASK 0
 #endif
 
 /* retty.c - attach process to current terminal
@@ -136,7 +138,8 @@ read_mem(pid_t pid, unsigned long *buf, int nlong, unsigned long pos)
 static void
 poke(unsigned char *data, off_t offset, long val)
 {
-	*((long *)(&data[offset])) = val;
+	*((long *)(&data[offset])) = val |
+		(*((long *)(&data[offset])) & MASK);
 }
 
 #ifdef DEBUG
