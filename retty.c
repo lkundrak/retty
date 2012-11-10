@@ -12,6 +12,14 @@
 #define MASK 0
 #endif
 
+#ifdef __arm__
+#define user_regs_struct user_regs
+#define SP_REG uregs[13]
+#define PC_REG uregs[15]
+#define MOVSIZE 0x00
+#define MASK 0xffffff00
+#endif
+
 /* retty.c - attach process to current terminal
  *
  * Usage: retty PID

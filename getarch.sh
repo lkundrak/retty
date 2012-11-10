@@ -16,6 +16,9 @@ ARCH=`uname -m`
 if echo $ARCH | grep '^i.86$' >/dev/null 2>/dev/null; then
   ARCH=ia32
 fi
+if echo $ARCH | grep '^armv.*l$' >/dev/null 2>/dev/null; then
+  ARCH=arm
+fi
 
 OS=`uname|tr [A-Z] [a-z]`
 
