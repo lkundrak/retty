@@ -544,9 +544,17 @@ main(int argc, char *argv[])
 
 	/* Setup pty */
 	ptm = getpt();
+	if (ptm == -1) {
+		perror("getpt");
+		exit(EXIT_FAILURE);
+	}
 	grantpt(ptm);
 	unlockpt(ptm);
 	pts = ptsname(ptm);
+	if (pts == NULL) {
+		perror("ptsname");
+		exit(EXIT_FAILURE);
+	}
 	tcflush(ptm, TCIOFLUSH);
 	//(void) ioctl(ptm, TIOCEXCL, (char *) 0);
 
