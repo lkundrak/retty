@@ -19,8 +19,12 @@ while ($l = <STDIN>) {
 			$c = $1;
 			$a = $2;
 			$b = $3;
-			$a =~ s/[^0-9a-f]//g;
-			$bytes += $a =~ s/([0-9a-f]{2})/0x\1,/g;
+
+			# Unconditionally messess byte order, only works on little endian
+			@bytes = map { reverse /([0-9a-f]{2})/g } split /\s+/, $a;
+			$bytes += scalar @bytes;
+			$a = join '', map { "0x$_, " } @bytes;
+
 			printf("/* %04s */\t%-30s\t/* \%s */\n", $c, $a, $b);
 		} elsif ($l =~ /^([0-9a-f]+) <(\S+)>:\s*$/) {
 			push (@id, [$2, $1]);
